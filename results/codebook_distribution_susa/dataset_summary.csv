@@ -1,0 +1,2 @@
+dataset,values,nonzero_symbols,zero_deltas,zero_rate,invalid_rows,distinct_keys,entropy_bits,effective_keys,normalized_entropy,top1_coverage,top4_coverage,top8_coverage,top16_coverage,top32_coverage,top64_coverage
+Stocks-USA,100002,65880,34122,0.341213175736,0,115,4.44166145,21.73068051,0.64884492,0.140452337583,0.437052216151,0.625986642380,0.828703703704,0.985124468731,0.999043715847

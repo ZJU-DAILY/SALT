@@ -1,0 +1,7 @@
+scope,dataset,target_coverage,ulp_radius,exponent_radius,cells,covered,total,actual_coverage
+global,ALL,0.90,1,3,42,65698,65880,0.997237401336
+global,ALL,0.95,1,3,42,65698,65880,0.997237401336
+global,ALL,0.99,1,3,42,65698,65880,0.997237401336
+dataset,Stocks-USA,0.90,1,3,42,65698,65880,0.997237401336
+dataset,Stocks-USA,0.95,1,3,42,65698,65880,0.997237401336
+dataset,Stocks-USA,0.99,1,3,42,65698,65880,0.997237401336

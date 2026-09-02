@@ -1,0 +1,49 @@
+# IDE metadata
+/.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Java and Python build artifacts
+/target/
+/out/
+/dependency-reduced-pom.xml
+__pycache__/
+*.py[cod]
+
+# Native build artifacts
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+
+# Local experiment workspaces and encoded intermediates
+/tmp/
+/storage/
+/tsfile/
+/datasets/deprecated/
+/datasets/Pilot/
+/datasets/Sample/
+/third_party/_work/
+/src/main/java/algorithms/FutureWork/
+*.log
+
+# Diagnostic experiment outputs (final summaries remain tracked)
+/results/**/*smoke*
+/results/**/*check*
+/results/codebook_distribution/aborteion/
+/results/codebook_distribution/rendered_*/
+
+# Local paper drafts and archives
+/0*.pdf
+/_VLDB*.pdf
+/ALP-main.zip
+/document/*_review.md
+/document/*_reduction_analysis.md
+/document/codebook_timing_revision.tex
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,133 @@
+name: CI
+run-name: ${{ github.actor }} is running the ALP CI
+
+on: push
+
+jobs:
+  check-format:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: echo build
+        run: echo "todo"
+
+  build:
+    needs:
+      - check-format
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ ubuntu-latest, macos-latest ]
+        BUILD_TYPE: [ Debug, Release ]
+        cxx: [ clang++ ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+
+      - name: Make directory build
+        run: mkdir ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: cmake -S ${{github.workspace}} -B ${{github.workspace}}/build
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j 16
+
+  test:
+    needs:
+      - build
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ ubuntu-latest, macos-latest ]
+        BUILD_TYPE: [ Debug, Release ]
+        cxx: [ clang++ ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+
+      - name: Make directory build
+        run: mkdir ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: cmake  -DALP_BUILD_TESTING=ON -DALP_ENABLE_VERBOSE_OUTPUT=ON -S ${{github.workspace}} -B ${{github.workspace}}/build
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j 16
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -j 4 --rerun-failed --output-on-failure
+
+  # -DCMAKE_TOOLCHAIN_FILE=toolchain/m1.cmake
+  build_benchmark:
+    needs:
+      - test
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ ubuntu-latest, macos-latest ]
+        BUILD_TYPE: [ Release ]
+        cc: [ clang ]
+        cxx: [ clang++ ]
+    runs-on: ${{ matrix.platform }}
+
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+
+      - name: mkdir build
+        run: mkdir ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: cmake -DALP_BUILD_BENCHMARKING=ON -DALP_BUILD_TESTING=ON -S ${{github.workspace}} -B ${{github.workspace}}/build
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j 16
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -j 4
+
+  build_full_dataset:
+    needs:
+      - test
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ ubuntu-latest, macos-latest ]
+        BUILD_TYPE: [ Release ]
+        cc: [ clang ]
+        cxx: [ clang++ ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+
+      - name: mkdir build
+        run: mkdir ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: cmake ALP_BUILD_BENCHMARKING -S ${{github.workspace}} -B ${{github.workspace}}/build
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j 16
+
+
+
+
+
