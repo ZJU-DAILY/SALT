@@ -9,9 +9,8 @@
 - `src/main/java/org/example`: command-line and paper experiment entry points.
 - `src/main/python`: publication-figure scripts.
 - `src/test/java`: fast regression tests for the core codec.
-- `datasets`: retained experiment inputs; see `datasets/README.md`.
-- `results`: publication-facing summaries and figures.
-- `ALP`: the canonical bundled ALP baseline, configured with 16-value vectors.
+- `datasets`: empty placeholder; supply local inputs before running experiments.
+- `results`: local experiment outputs, excluded from Git.
 - `abortion`: archived files and originals of edited files; excluded from Git.
 
 Generated compressed streams belong in `storage/`; builds belong in `target/`;

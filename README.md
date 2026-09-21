@@ -16,7 +16,6 @@ publication-facing results, and third-party baseline overlays. See
 - JDK 8 or later
 - Apache Maven 3.8 or later
 - Python 3.9 or later for plotting scripts
-- CMake and a C++ compiler only for the bundled ALP baseline
 
 ## Build
 
@@ -285,16 +284,15 @@ Python plotting utilities are located in `src/main/python`.
 
 ## Data and generated files
 
-The experiment subsets currently retained in Git are described in
-`datasets/README.md`. Encoded streams, deprecated data, diagnostic outputs,
-temporary files, IDE metadata, and local paper drafts are excluded. See
-`results/README.md` for the result-retention policy.
+Only `datasets/.gitkeep` is tracked. Supply your own input files before running
+the examples. Dataset contents and experiment results are excluded from Git,
+along with encoded streams, temporary files, IDE metadata, and local paper drafts.
 
 ## Third-party software
 
-The `ALP/` directory contains the canonical ALP baseline configured with
-16-value vectors. The optional customized TsFile experiment and its setup files
-are archived under `abortion/files/`.
+The native ALP tree is archived locally under `abortion/upload-layout-20260921/ALP`.
+The Java ALP adapter remains in `src/main/java/algorithms/ALP`. The optional
+customized TsFile experiment and its setup files are archived under `abortion/files/`.
 
 ## License and citation
 

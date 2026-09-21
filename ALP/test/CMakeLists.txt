@@ -1,3 +1,0 @@
-add_executable(test_alp_sample test_alp_sample.cpp)
-target_link_libraries(test_alp_sample PUBLIC gtest_main ALP)
-gtest_discover_tests(test_alp_sample)

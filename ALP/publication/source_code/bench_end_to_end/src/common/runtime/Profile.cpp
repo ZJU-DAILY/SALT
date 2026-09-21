@@ -1,2 +1,0 @@
-
-bool writeHeader = true;
