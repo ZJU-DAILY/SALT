@@ -7,9 +7,9 @@ update operations.
 
 ## Repository layout
 
-The repository separates codec sources, experiment drivers, retained inputs,
-publication-facing results, and third-party baseline overlays. See
-[`docs/README.md`](docs/README.md) for the directory map.
+Codec sources and experiment drivers are under `src`, with Kangaroo's core
+implementation under `kangaroo-java`. The `datasets` directory is a placeholder
+for local inputs. Results and the local `abortion` archive are excluded from Git.
 
 ## Requirements
 
@@ -83,7 +83,7 @@ This is a file-I/O benchmark (including OS page-cache effects), not a pure codec
 benchmark. Kangaroo's adapter includes its existing memory buffering and the
 copy to/from shared streams. Compression sizes include each codec's own framing.
 The earlier standalone memory throughput numbers must not be mixed with these
-results. See [integration notes](docs/kangaroo-integration.md).
+results.
 
 The legacy `Main`/`TestBuilder` entry also recognizes `-m Kangaroo`, but retains
 its original header skipping, timing and validation behavior for reproducibility;
@@ -100,8 +100,7 @@ All widths below are in **bits**.
 ### SALT stream (legacy mode)
 
 RAW is enabled by default, with a 10,000-value internal block. The enabled format
-adds a mode marker and reserves RAW alongside ESC and ZERO; see
-[`docs/salt-raw-guard.md`](docs/salt-raw-guard.md) for the active format.
+adds a mode marker and reserves RAW alongside ESC and ZERO.
 The layout below describes the legacy mode selected by `-Dsalt.raw.enabled=false`.
 
 The benchmark codec implemented by
