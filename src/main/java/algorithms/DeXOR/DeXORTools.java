@@ -1,7 +1,7 @@
 package algorithms.DeXOR;
 
 public class DeXORTools {
-//    private static final double log210 = 1 / Math.log10(2);
+
     private static final int[] cost = new int[]{0, 4, 7, 10, 14, 17, 20, 24, 27, 30, 34, 37, 40, 44, 47, 50, 54, 57, 60, 64, 67, 70, 74, 77};
     private static final double equal_eps = 1e-23;
     private static final double integer_eps = 1e-6;
@@ -48,8 +48,6 @@ public class DeXORTools {
     public static boolean isInt(double value, double eps) {
         return comp(value, Math.round(value), eps) == 0;
     }
-
-
 
     public static boolean isEnd(double value, int end) {
         double alpha = value / getP10(end);
@@ -108,7 +106,7 @@ public class DeXORTools {
         return 0;
     }
 
-    public static long segment(long v, int st, int ed) { // 1 - 64;
+    public static long segment(long v, int st, int ed) { 
         int len = ed - st + 1;
         long mask = (1L << len) - 1;
         return (v >> (64 - ed)) & mask;

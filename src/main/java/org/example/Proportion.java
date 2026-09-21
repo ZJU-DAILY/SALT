@@ -9,7 +9,6 @@ import java.util.Set;
 
 public class Proportion {
 
-
     public static void main(String[] args) {
         String data_path = "./datasets/Proportion";
         String store_path = "./storage";
@@ -24,9 +23,8 @@ public class Proportion {
                 AlgorithmEnums.Camel,
                 AlgorithmEnums.SALTE
         };
-//        String config_path = "./config.txt";
+
         String config_path = "";
-//        AlgorithmEnums[] methods = AlgorithmEnums.values();
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {

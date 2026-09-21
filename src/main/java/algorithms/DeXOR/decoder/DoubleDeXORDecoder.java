@@ -98,7 +98,6 @@ public class DoubleDeXORDecoder extends Decoder {
                 return ExceptionDecode();
             }
 
-
             if (con == 0 || con == 1) {
                 if (con == 0) previous_q = in.readInt(5) - 20;
                 previous_delta = in.readInt(4);
@@ -163,7 +162,7 @@ public class DoubleDeXORDecoder extends Decoder {
             if (skip) return ExceptionDecode();
             int con = in.readInt(2);
             if (con == 3) { // overflow Exception
-//            return in.readDouble(64);
+
                 exception_times++;
                 if (exception_times >= skip_available) skip = true;
                 return ExceptionDecode();

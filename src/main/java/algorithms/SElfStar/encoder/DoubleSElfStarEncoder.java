@@ -110,9 +110,8 @@ public class DoubleSElfStarEncoder extends Encoder {
 //            out.write(2, 2);  // case 10
             isFirstBlock = false;
         }
-//        else {
+
 //            out.write(huffmanCode[16].code, huffmanCode[16].length); // not erase
-//        }
 
         huffmanCode = HuffmanEncode.getHuffmanCodes(frequency);
         Arrays.fill(frequency, 0);

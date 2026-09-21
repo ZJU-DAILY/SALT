@@ -14,7 +14,7 @@ import static SALT.SALTSQL_Decompress.decompressOneWindow01Stream;
 import static SALT.SALTSQL_Decompress.aggregateOneWindow01Stream;
 /**
  * Packed-bits ONLY version:
- * - Main data: <base>.bin (bits packed MSB-first), starts with 5-byte meta (width + count), then window bits.
+ * - Main data: <base>.bin (bits packed MSB-first), starts with a 12-bit header (WIN + EXP + ULP), then window bits.
  * - Sidecars: <base>_window_len.bin / <base>_len_fenwick.bin / <base>_window_num.bin / <base>_num_fenwick.bin
  *   All are packed MSB-first, start with 5-byte meta (width + count), then values stream.
  *
@@ -139,7 +139,6 @@ public final class SALTSQL_CRUD implements Closeable {
         }
     }
 
-
     /**
      * ✅ 只输入一个文件名称即可初始化：
      * - 支持输入基名：Basel-temp
@@ -166,11 +165,10 @@ public final class SALTSQL_CRUD implements Closeable {
         File num = new File(dir, base + "_window_num.bin");
         File numFen = new File(dir, base + "_num_fenwick.bin");
 
-        // 1) 先按你原逻辑创建 CRUD（会打开 rafBin）
-        SALTSQL_CRUD crud = new SALTSQL_CRUD(bin, len, lenFen, num, numFen); // rafBin 在构造器里打开 :contentReference[oaicite:1]{index=1}
+        // Open the main file and sidecars.
+        SALTSQL_CRUD crud = new SALTSQL_CRUD(bin, len, lenFen, num, numFen);
 
-        // 2) 再从主 bin 的前 12 bit 读取 meta：WIN(4) + EXP(4) + ULP(4)
-        //    注意：你的主 bin 从 bitOffset=12 开始才是窗口数据（前 12bit 是 meta）:contentReference[oaicite:2]{index=2}
+        // Read the 12-bit header: WIN(4) + EXP(4) + ULP(4).
         long oldPos = crud.rafBin.getFilePointer();
         try {
             crud.rafBin.seek(0);
@@ -289,7 +287,6 @@ public final class SALTSQL_CRUD implements Closeable {
             this.count = count;
         }
     }
-
 
     private static void safeClose(Closeable c) {
         if (c == null) return;
@@ -481,7 +478,6 @@ public final class SALTSQL_CRUD implements Closeable {
         }
     }
 
-
     private static byte[] readFullyN(InputStream in, int n, String eofMessage) throws IOException {
         byte[] buf = new byte[n];
         int off = 0;
@@ -539,8 +535,6 @@ public final class SALTSQL_CRUD implements Closeable {
         }
     }
 
-
-
     private static String removeExtension(String filename) {
         int dot = filename.lastIndexOf('.');
         return (dot > 0) ? filename.substring(0, dot) : filename;
@@ -552,7 +546,6 @@ public final class SALTSQL_CRUD implements Closeable {
                     " (0.." + (windowLenBits.length - 1) + ")");
         }
     }
-
 
     /**
      * Core update method (single-window):
@@ -608,7 +601,6 @@ public final class SALTSQL_CRUD implements Closeable {
         try { rafNumFen.close(); } catch (IOException e) { if (ex == null) ex = e; }
         if (ex != null) throw ex;
     }
-
 
     public static BigDecimal getValueByRecordIndex(SALTSQL_CRUD crud, long recordIndex) throws IOException {
         if (crud == null) throw new IllegalArgumentException("crud is null");
@@ -916,14 +908,9 @@ public final class SALTSQL_CRUD implements Closeable {
         BigDecimal result = values.get(inWindowIndex);
 
         long endTime = System.nanoTime();
-//        System.out.println("GetValueByRecordIndex: query time (ms): " + ((endTime - startTime) / 1_000_000.0));
 
-//        return result;
         return BigDecimal.valueOf((endTime - startTime) / 1_000_000.0);
     }
-
-
-
 
     // 返回最小 idx(1..n)，使得 prefixSum(idx) >= target
     // numFenwick 是 1-indexed，长度 n+1
@@ -947,69 +934,10 @@ public final class SALTSQL_CRUD implements Closeable {
     }
 
 
-
-
-
-    // -------------------- demo main --------------------
-    // 用法：java lzq.Our.Our_SQL_CRUD CA 0
-    public static void main(String[] args) throws Exception {
-
-        String fileNameOrPath = "Wind-Speed_first_100pct";
-        int circleCount = 10000;
-
-        SALTSQL_CRUD crud = SALTSQL_CRUD.openByName(fileNameOrPath);
-
-        double sum1 = 0.0;
-        double sum2 = 0.0;
-        double sum3 = 0.0;
-        double sum4 = 0.0;
-
-        for (int i = 0; i < circleCount; i++) {
-            // 1) 生成 1000 到 5000 的随机整数，包含两端
-            int randomIndex = ThreadLocalRandom.current().nextInt(1000, 5001);
-
-            // 2) 生成 -100 到 100 的随机小数，保留两位
-            double rawDouble = ThreadLocalRandom.current().nextDouble(-100.0, 100.0);
-            BigDecimal randomValue = BigDecimal.valueOf(rawDouble).setScale(2, RoundingMode.HALF_UP);
-
-            sum1 += crud.getValueByRecordIndexInternal(randomIndex).doubleValue();
-
-            randomIndex = ThreadLocalRandom.current().nextInt(1000, 5001);
-            rawDouble = ThreadLocalRandom.current().nextDouble(-100.0, 100.0);
-            randomValue = BigDecimal.valueOf(rawDouble).setScale(2, RoundingMode.HALF_UP);
-            sum2 += crud.deleteRecordByIndex(randomIndex).doubleValue();
-
-            randomIndex = ThreadLocalRandom.current().nextInt(1000, 5001);
-            rawDouble = ThreadLocalRandom.current().nextDouble(-100.0, 100.0);
-            randomValue = BigDecimal.valueOf(rawDouble).setScale(2, RoundingMode.HALF_UP);
-            sum3 += crud.insertRecordByIndex(randomIndex,randomValue).doubleValue();
-
-            randomIndex = ThreadLocalRandom.current().nextInt(1000, 5001);
-            rawDouble = ThreadLocalRandom.current().nextDouble(-100.0, 100.0);
-            randomValue = BigDecimal.valueOf(rawDouble).setScale(2, RoundingMode.HALF_UP);
-            sum4 += crud.updateRecordByIndex(randomIndex,randomValue).doubleValue();
-
-
-        }
-
-        System.out.println("Average Query Time = " + sum1/circleCount + " ms");
-        System.out.println("Average Delete Time = " + sum2/circleCount + " ms");
-        System.out.println("Average Insert Time = " + sum3/circleCount + " ms");
-        System.out.println("Average Update Time = " + sum4/circleCount + " ms");
-
-
-    }
-
     /**
-     * Delete exactly one record by its GLOBAL 0-based index.
-     *
-     * Steps:
-     * 1) Locate windowNo and inWindowIndex via numFenwick.
-     * 2) Read that window's bitstream, decompress to values, remove the target value.
-     * 3) Re-encode the modified window, then rewrite the whole main .bin (header + all windows) to keep windows contiguous.
-     * 4) Update windowLenBits/windowNum and write sidecars + Fenwick via updateWindowLenAndNum(...).
-     *
-     * @return the removed value (for verification)
+     * Measures window lookup, decoding, deletion, and re-encoding.
+     * Does not write the modified window or update indexes.
+     * @return elapsed time in milliseconds
      */
     private BigDecimal deleteRecordByIndex(long recordIndex) throws IOException {
 
@@ -1060,20 +988,8 @@ public final class SALTSQL_CRUD implements Closeable {
 
         long midTime = System.nanoTime();
 
-//        System.out.println("DeleteRecordByIndex query time: " + (midTime - startTime)/1_000_000 + " ms");
-
-//
-//        // ---- 3) rewrite main .bin to keep all windows contiguous (header + all windows) ----
-//        // IMPORTANT: this must run BEFORE updateWindowLenAndNum(...) so reads of other windows still use OLD offsets/lengths.
-//        rewriteMainBinReplacingOneWindow(windowNo, newBits);
-//
-//        // ---- 4) update len/num + sidecars + on-disk Fenwick ----
-//        updateWindowLenAndNum(windowNo, newLenBits, newNum);
-//
         long endTime = System.nanoTime();
-//        System.out.println("DeleteRecordByIndex rewrite time: " + ((endTime - startTime)/1_000_000) + " ms");
 
-//        return removed;
         return BigDecimal.valueOf((endTime - startTime)/1_000_000.0);
     }
 
@@ -1158,15 +1074,9 @@ public final class SALTSQL_CRUD implements Closeable {
     }
 
     /**
-     * Update exactly one record by its GLOBAL 0-based index.
-     *
-     * Steps:
-     * 1) Locate windowNo and inWindowIndex via numFenwick.
-     * 2) Read that window's bitstream, decompress to values, replace the target value.
-     * 3) Re-encode the modified window, then rewrite the whole main .bin (header + all windows).
-     * 4) Update windowLenBits/windowNum and write sidecars + Fenwick via updateWindowLenAndNum(...).
-     *
-     * @return the old value (for verification)
+     * Measures window lookup, decoding, replacement, and re-encoding.
+     * Does not write the modified window or update indexes.
+     * @return elapsed time in milliseconds
      */
     private BigDecimal updateRecordByIndex(long recordIndex, BigDecimal newValue) throws IOException {
         long startTime = System.nanoTime();
@@ -1207,45 +1117,23 @@ public final class SALTSQL_CRUD implements Closeable {
 
         BigDecimal oldValue = values.set(inWindowIndex, newValue);
 
-//        System.out.println(values.size());
-
         String newBits = encodeAsOneWindow01String(values, exponentBitsFromFile, ulpBitsFromFile);
         long newLenBits = newBits.length();
         long newNum = values.size(); // should equal oldNum
 
         long midTime= System.nanoTime();
-//        System.out.println("UpdateRecordByIndex: decode+query time (ms): " + ((midTime - startTime)/1_000_000.0));
-
-
-//        // ---- 3) rewrite main .bin to keep all windows contiguous ----
-//        // IMPORTANT: must run BEFORE updateWindowLenAndNum(...) so reads of other windows still use OLD offsets/lengths.
-//        rewriteMainBinReplacingOneWindow(windowNo, newBits);
-//
-//        // ---- 4) update len/num + sidecars + on-disk Fenwick ----
-//        updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
         long endTime = System.nanoTime();
-//        System.out.println("UpdateRecordByIndex: rewrite time (ms): " + ((endTime - midTime)/1_000_000.0));
 
-//        return oldValue;
         return BigDecimal.valueOf((midTime - startTime)/1_000_000.0);
     }
 
-
     /**
-     * Insert exactly one record at GLOBAL 0-based position recordIndex.
-     * - Allowed range: [0..totalRecords]  (recordIndex == totalRecords means append)
-     *
-     * Steps:
-     * 1) Locate windowNo and inWindowIndex:
-     *    - if inserting in the middle: same as get/delete (target = recordIndex+1)
-     *    - if appending: locate last non-empty window via target = totalRecords (last record), then insert at end of that window
-     * 2) Decode that window, values.add(inWindowIndex, value).
-     * 3) Re-encode + rewrite main .bin
-     * 4) updateWindowLenAndNum
+     * Measures window lookup, decoding, insertion, and re-encoding.
+     * Does not write the modified window or update indexes.
+     * @return elapsed time in milliseconds
      */
     private BigDecimal insertRecordByIndex(long recordIndex, BigDecimal value) throws IOException {
-
 
         if (value == null) throw new IllegalArgumentException("value is null");
 
@@ -1291,7 +1179,6 @@ public final class SALTSQL_CRUD implements Closeable {
         String oldBits = readWindow01(windowNo);
         List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile);
 
-
         if (inWindowIndex < 0 || inWindowIndex > values.size()) {
             throw new IOException("Insert index mismatch: windowNo=" + windowNo +
                     ", inWindowIndex=" + inWindowIndex +
@@ -1305,15 +1192,6 @@ public final class SALTSQL_CRUD implements Closeable {
         long newNum = values.size();
 
         long midTime= System.nanoTime();
-//        System.out.println("InsertRecordByIndex: decode+query time (ms): " + ((midTime - startTime)/1_000_000.0));
-//        // ---- 3) rewrite main .bin ----
-//        rewriteMainBinReplacingOneWindow(windowNo, newBits);
-//
-//        // ---- 4) update sidecars + fenwick ----
-//        updateWindowLenAndNum(windowNo, newLenBits, newNum);
-//        long endTime = System.nanoTime();
-//        System.out.println("InsertRecordByIndex: rewrite time (ms): " + ((endTime - midTime)/1_000_000.0));
-
 
         return BigDecimal.valueOf((midTime - startTime)/1_000_000.0);
     }

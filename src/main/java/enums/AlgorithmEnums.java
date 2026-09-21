@@ -1,6 +1,5 @@
 package enums;
 
-
 public enum AlgorithmEnums {
     GORILLA("Gorilla"),
     CHIMP("Chimp"),
@@ -9,6 +8,8 @@ public enum AlgorithmEnums {
     ElfPlus("ElfPlus"),
     Camel("Camel"),
     DeXOR("DeXOR"),
+    Kangaroo("Kangaroo"),
+    KangarooCompact("KangarooCompact"),
     ALP("ALP"),
     ElfStar("ElfStar"),
     SElfStar("SElfStar"),

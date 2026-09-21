@@ -4,7 +4,6 @@ import algorithms.Encoder;
 import algorithms.DeXOR.DeXORTools;
 import enums.DataTypeEnums;
 
-
 public class DoubleDeXOREncoder extends Encoder {
     protected int size = DataTypeEnums.DOUBLE.getSize();
     protected double previous_value = 0;
@@ -119,7 +118,7 @@ public class DoubleDeXOREncoder extends Encoder {
 
             beta = Math.abs(beta);
             boolean flag = q == previous_q;
-            if (flag && delta == previous_delta) { //
+            if (flag && delta == previous_delta) { 
                 // same method 10
                 out.write(true);
                 out.write(false);
@@ -187,7 +186,7 @@ public class DoubleDeXOREncoder extends Encoder {
             exception_times = 0;
             beta = Math.abs(beta);
             boolean flag = q == previous_q;
-            if (flag && delta == previous_delta) { //
+            if (flag && delta == previous_delta) { 
                 // same method 10
                 out.write(true);
                 out.write(false);
@@ -255,7 +254,6 @@ public class DoubleDeXOREncoder extends Encoder {
                 }
             }
 
-
             double q_pow = DeXORTools.getP10(q);
             double residual = value - alpha;
             long beta = Math.round((residual) / q_pow);
@@ -269,7 +267,7 @@ public class DoubleDeXOREncoder extends Encoder {
 
             beta = Math.abs(beta);
             boolean flag = q == previous_q;
-            if (flag && delta == previous_delta) { //
+            if (flag && delta == previous_delta) { 
                 // same method 10
                 out.write(true);
                 out.write(false);
@@ -297,7 +295,6 @@ public class DoubleDeXOREncoder extends Encoder {
             total %= buffer.length;
         }
     }
-
 
     @Override
     public int encode(double value) {

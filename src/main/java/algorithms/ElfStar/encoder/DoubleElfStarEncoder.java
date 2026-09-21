@@ -21,7 +21,6 @@ public class DoubleElfStarEncoder extends Encoder {
     private final int[] frequency = new int[17];    // 0 is for 10-i, 16 is for not erasing
     private Code[] huffmanCode;
 
-
     public DoubleElfStarEncoder(String outputpath) {
         super(outputpath);
         xorCompressor = new ElfStarXORCompressor(this.out);
@@ -102,7 +101,6 @@ public class DoubleElfStarEncoder extends Encoder {
         init();
         return out.track_bits();
     }
-
 
     @Override
     public int encode(double value) {

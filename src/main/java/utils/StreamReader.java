@@ -37,7 +37,6 @@ public class StreamReader {
 
     }
 
-
     public long readLong(int size) {
         long res = 0;
         while (size >= leftBits) {

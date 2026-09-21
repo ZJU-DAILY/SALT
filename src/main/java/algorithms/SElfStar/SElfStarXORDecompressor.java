@@ -1,6 +1,5 @@
 package algorithms.SElfStar;
 
-
 import utils.StreamReader;
 
 import java.io.IOException;
@@ -58,7 +57,6 @@ public class SElfStarXORDecompressor{
         }
     }
 
-
     public void refresh() {
         first = true;
         endOfStream = false;
@@ -94,7 +92,7 @@ public class SElfStarXORDecompressor{
             } else {
                 storedVal = 0;
             }
-//            endOfStream = storedVal == Elf64Utils.END_SIGN;
+
         } else {
             nextValue();
         }
@@ -109,7 +107,7 @@ public class SElfStarXORDecompressor{
             centerBits = 64 - storedLeadingZeros - storedTrailingZeros;
             value = in.readLong(centerBits) << storedTrailingZeros;
             value = storedVal ^ value;
-//            endOfStream = value == Elf64Utils.END_SIGN;
+
             storedVal = value;
         } else if (in.readInt(1) == 0) {
             // case 00
@@ -122,7 +120,7 @@ public class SElfStarXORDecompressor{
 
             value = in.readLong(centerBits) << storedTrailingZeros;
             value = storedVal ^ value;
-//            endOfStream = value == Elf64Utils.END_SIGN;
+
             storedVal = value;
         }
     }

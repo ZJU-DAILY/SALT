@@ -18,8 +18,7 @@ public class DoubleOurEEncoder extends Encoder {
     // 0 => auto (same as your CODE_BITS=0)
     private static final int CODE_BITS = 0;
 
-    private static final int BLOCK_SIZE = 30000
-            ;
+    private static final int BLOCK_SIZE = 10000;
 
     // ====== Codebook fixed widths (must match your decoder) ======
     private static final int CODEBOOK_ULP_BITS = 5;
@@ -45,6 +44,23 @@ public class DoubleOurEEncoder extends Encoder {
     private final Probe probe = new Probe();
 
     private boolean headerWritten = false;
+
+    // RAW is enabled by default. The decoder detects the format from its header.
+    private final boolean rawEnabled;
+    private long rawCount = 0;
+    private long rejectedCandidates = 0;
+
+    public long getRawCount() { return rawCount; }
+    public boolean isRawEnabled() { return rawEnabled; }
+
+    @Override
+    public Map<String, Double> getMeta() {
+        meta.put("raw_enabled", rawEnabled ? 1.0 : 0.0);
+        meta.put("raw_count", (double) rawCount);
+        meta.put("raw_percent", blockCount == 0 ? 0.0 : 100.0 * rawCount / blockCount);
+        meta.put("rejected_candidates", (double) rejectedCandidates);
+        return meta;
+    }
 
     // ====== Compact key types (same idea as your Our_With_Encode) ======
     static final class Key {
@@ -93,7 +109,14 @@ public class DoubleOurEEncoder extends Encoder {
     }
 
     public DoubleOurEEncoder(String outputPath) {
+        this(outputPath, Boolean.parseBoolean(System.getProperty("salt.raw.enabled", "true")));
+    }
+
+    public DoubleOurEEncoder(String outputPath, boolean rawEnabled) {
         super(outputPath);
+        this.rawEnabled = rawEnabled;
+        // The initial RAW-enabled codebook has no adaptive entries and three reserved codes.
+        this.minCountBits = rawEnabled ? 2 : 0;
         // Init windows to 0.1 (same as your code)
         Arrays.fill(valueWin, BigDecimal.valueOf(0.1));
         Arrays.fill(deltaWin, BigDecimal.valueOf(0.1));
@@ -103,6 +126,10 @@ public class DoubleOurEEncoder extends Encoder {
     public int encode(double v) {
         // Write meta header once (same as your .bin format)
         if (!headerWritten) {
+            if (rawEnabled) {
+                out.write(15, 4); // reserved extension marker, outside supported legacy window sizes
+                out.write(2, 4); // version 2: RAW is a peer of ZERO and ESC
+            }
             out.write(WIN_BITS, 4);
             out.write(EXPONENT_BITS, 4);
             out.write(ULP_BITS, 4);
@@ -110,13 +137,14 @@ public class DoubleOurEEncoder extends Encoder {
             headerWritten = true;
         }
 
-        BigDecimal value = new BigDecimal(Double.toString(v)).stripTrailingZeros();
-
         // Insert codebook BEFORE encoding value when (blockCount % BLOCK_SIZE == BLOCK_SIZE-1)
         if (BLOCK_SIZE > 0 && (blockCount % BLOCK_SIZE == BLOCK_SIZE - 1)) {
             buildAndWriteCodebook();
             counts.clear();
         }
+
+        if (rawEnabled && !Double.isFinite(v)) return writeRaw(v);
+        BigDecimal value = new BigDecimal(Double.toString(v)).stripTrailingZeros();
 
         // Pick best window reference
         int bestI = 0;
@@ -140,7 +168,7 @@ public class DoubleOurEEncoder extends Encoder {
             // delta == 0
             if (delta.signum() == 0) {
                 int bits;
-                if (blockCount < BLOCK_SIZE - 1) {
+                if (!rawEnabled && blockCount < BLOCK_SIZE - 1) {
                     bits = WIN_BITS + 1; // [WIN][zeroFlag]
                 } else {
                     bits = WIN_BITS + minCountBits; // [WIN][zeroCode]
@@ -161,8 +189,14 @@ public class DoubleOurEEncoder extends Encoder {
             if (manBits > 52) manBits = 52;
             if (manBits < 0) manBits = 0;
 
+            if (rawEnabled && !isReversibleCandidate(v, value, prevValue, delta,
+                    sign, ulpDelta, expDelta, manBits)) {
+                rejectedCandidates++;
+                continue;
+            }
+
             int bits;
-            if (blockCount < BLOCK_SIZE - 1) {
+            if (!rawEnabled && blockCount < BLOCK_SIZE - 1) {
                 // warmup format: [WIN][zeroFlag=0][sign][expDelta(+exp11?)][ulpDelta(+ulp4?)][mantissa]
                 bits = WIN_BITS + 1 + 1; // WIN + zeroFlag + sign
                 bits += expDeltaCostBits(expDelta);
@@ -193,7 +227,7 @@ public class DoubleOurEEncoder extends Encoder {
                 bestExpDelta = expDelta;
                 bestManBits = manBits;
 
-                if (blockCount >= BLOCK_SIZE - 1) {
+                if (rawEnabled || blockCount >= BLOCK_SIZE - 1) {
                     probe.set(sign, ulpDelta, expDelta);
                     if (prevCounts.containsKey(probe)) {
                         bestCodeIndex = getRank(prevCounts, probe);
@@ -204,11 +238,13 @@ public class DoubleOurEEncoder extends Encoder {
             }
         }
 
+        if (rawEnabled && minBits == Integer.MAX_VALUE) return writeRaw(v);
+
         // ====== Write bits ======
         // write WIN index
         out.write(bestI, WIN_BITS);
 
-        if (blockCount < BLOCK_SIZE - 1) {
+        if (!rawEnabled && blockCount < BLOCK_SIZE - 1) {
             // warmup
             if (bestDelta.signum() == 0) {
                 out.write(true); // zeroFlag = 1
@@ -252,7 +288,11 @@ public class DoubleOurEEncoder extends Encoder {
             winIndex = (winIndex + 1) % winCapacity;
 
             Key k = new Key(bestSign, bestUlpDelta, bestExpDelta);
-            counts.put(k, counts.getOrDefault(k, 0) + 1);
+            // An ESC-representable transition need not fit a codebook entry.
+            // Keep it on ESC instead of serializing an overflowing codebook key.
+            if (!rawEnabled || (Math.abs(k.u) <= 15 && Math.abs(k.e) <= 1023)) {
+                counts.put(k, counts.getOrDefault(k, 0) + 1);
+            }
         }
 
         blockCount++;
@@ -260,21 +300,60 @@ public class DoubleOurEEncoder extends Encoder {
         return out.track_bits();
     }
 
-    // -------------------------------------------------------------------------
+    /** Validate the actual decoder reconstruction, including future decimal window state. */
+    private boolean isReversibleCandidate(double original, BigDecimal value,
+            BigDecimal reference, BigDecimal delta, int sign, int ulpDelta,
+            int expDelta, int manBits) {
+        double d = delta.doubleValue();
+        if (!Double.isFinite(d) || Math.abs(d) < Double.MIN_NORMAL) return false;
+        int exponent = SALTEUtils.getIeeeExponent(delta);
+        int places = SALTEUtils.getUlpPlaces(delta);
+        probe.set(sign, ulpDelta, expDelta);
+        boolean hit = (rawEnabled || blockCount >= BLOCK_SIZE - 1) && prevCounts.containsKey(probe);
+        // Absolute precision is four bits only on the escaped precision path.
+        if (!hit && Math.abs(ulpDelta) > ((1 << (ULP_BITS - 1)) - 1) && places > 15) {
+            return false;
+        }
+        if (manBits != SALTEUtils.mantissaBitsToKeep(exponent, places)) return false;
+        long top = SALTEUtils.getDoubleMantissaTopBits(d, manBits);
+        double rebuilt = SALTEUtils.buildDouble(sign, exponent, top, manBits);
+        BigDecimal decodedDelta = SALTEUtils.toScaledBigDecimal(rebuilt, places).stripTrailingZeros();
+        BigDecimal decodedValue = SALTEUtils.addWithOriginalPrecision(reference, decodedDelta);
+        // Matching only today's double can hide different decimal states and corrupt later values.
+        return decodedDelta.compareTo(delta) == 0 && decodedValue.compareTo(value) == 0
+                && (original == decodedValue.doubleValue()); // signed zeros deliberately equivalent
+    }
+
+    /**
+     * RAW is a reserved codeword at 2^b-3; ESC=2^b-2 and ZERO=2^b-1.
+     * This format is used from the first value (initial code width b=2).
+     * Payload: WIN(0), RAW codeword, raw64. No sign/exponent/precision fields follow.
+     * RAW never advances windows or statistics.
+     */
+    private int writeRaw(double value) {
+        out.write(0, WIN_BITS);
+        out.write((1 << minCountBits) - 3, minCountBits);
+        out.write(Double.doubleToRawLongBits(value), 64);
+        rawCount++;
+        blockCount++;
+        return out.track_bits();
+    }
+
     // Codebook build + write
-    // -------------------------------------------------------------------------
 
     private void buildAndWriteCodebook() {
         int distinct = counts.size();
+        int reservedCodes = rawEnabled ? 3 : 2;
+        int minimumCodeBits = rawEnabled ? 2 : 1;
 
         if (CODE_BITS == 0) {
-            int countBits = 1;
+            int countBits = minimumCodeBits;
             long minBlockCost = Long.MAX_VALUE;
-            int bestBits = 1;
+            int bestBits = minimumCodeBits;
 
             // enumerate until (1<<countBits) >= distinct
             while ((1 << countBits) < distinct) {
-                int cap = (1 << countBits) - 2;
+                int cap = (1 << countBits) - reservedCodes;
                 int saved = 0;
                 int keySum = 0;
 
@@ -302,7 +381,7 @@ public class DoubleOurEEncoder extends Encoder {
             }
 
             minCountBits = bestBits;
-            int finalCap = (1 << minCountBits) - 2;
+            int finalCap = (1 << minCountBits) - reservedCodes;
 
             LinkedHashMap<Key, Integer> codebook;
             if (finalCap > 0) {
@@ -313,7 +392,10 @@ public class DoubleOurEEncoder extends Encoder {
             prevCounts = codebook;
         } else {
             minCountBits = CODE_BITS;
-            int cap = (1 << minCountBits) - 2;
+            if (minCountBits < minimumCodeBits) {
+                throw new IllegalArgumentException("Insufficient code bits for reserved codewords");
+            }
+            int cap = (1 << minCountBits) - reservedCodes;
             prevCounts = new LinkedHashMap<>(getTopN(counts, Math.max(0, cap)));
         }
 
@@ -353,9 +435,7 @@ public class DoubleOurEEncoder extends Encoder {
         }
     }
 
-    // -------------------------------------------------------------------------
     // Field writers
-    // -------------------------------------------------------------------------
 
     private void writeExpDelta(BigDecimal delta, int expDelta) {
         // write expDelta in EXPONENT_BITS sign-mag with "-0" sentinel
@@ -390,9 +470,7 @@ public class DoubleOurEEncoder extends Encoder {
         out.write(top, manBits);
     }
 
-    // -------------------------------------------------------------------------
     // Costs & helpers
-    // -------------------------------------------------------------------------
 
     private static int expDeltaCostBits(int expDelta) {
         int bits = EXPONENT_BITS;

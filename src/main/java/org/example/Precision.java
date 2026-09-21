@@ -9,25 +9,16 @@ import java.util.Set;
 
 public class Precision {
 
-
     public static void main(String[] args) {
         String data_path = "./datasets/precision";
         String store_path = "./storage";
         String result_path = "./results/precision";
         AlgorithmEnums[] methods = new AlgorithmEnums[]{
-//                AlgorithmEnums.ALP,
-//                AlgorithmEnums.DeXOR,
-//                AlgorithmEnums.GORILLA,
-//                AlgorithmEnums.ElfPlus,
-//                AlgorithmEnums.CHIMP,
-//                AlgorithmEnums.CHIMP128,
-//                AlgorithmEnums.Elf,
-//                AlgorithmEnums.Camel,
+
                 AlgorithmEnums.SALTE
         };
-//        String config_path = "./config.txt";
+
         String config_path = "";
-//        AlgorithmEnums[] methods = AlgorithmEnums.values();
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {

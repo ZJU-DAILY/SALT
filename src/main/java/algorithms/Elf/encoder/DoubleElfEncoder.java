@@ -14,7 +14,6 @@ public class DoubleElfEncoder extends Encoder {
     protected int previous_betaStar = 0;
     protected boolean first = true;
 
-
     public DoubleElfEncoder(String outputPath) {
         super(outputPath);
     }

@@ -39,7 +39,6 @@ public class CamelTools {
         return lim;
     }
 
-
     public static double calculate_dxor(double dec, int l) {
         double pow = quick_pow2(-l);
         return dec - pow * Math.floor(dec / pow);

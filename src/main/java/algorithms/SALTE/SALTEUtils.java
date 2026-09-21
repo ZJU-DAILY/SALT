@@ -29,19 +29,11 @@ public final class SALTEUtils {
         }
     }
 
-    // -------------------------------------------------------------------------
     // Basic helpers
-    // -------------------------------------------------------------------------
 
-
-
-
-
-    // -------------------------------------------------------------------------
     // Sign-magnitude helpers (with "-0" overflow sentinel)
     // Layout: [sign(1)][magnitude(totalBits-1)]
     // Overflow sentinel: sign=1 and magnitude=0 (only meaningful when magBits>0)
-    // -------------------------------------------------------------------------
 
     /**
      * Encode sign-magnitude into low totalBits bits of a long.
@@ -94,17 +86,13 @@ public final class SALTEUtils {
         return new SignMag(val, overflow);
     }
 
-
-    // -------------------------------------------------------------------------
     // IEEE exponent / ulp places helpers
-    // -------------------------------------------------------------------------
 
     /** Same behavior as your original: for 0 => -1023. */
     public static int getIeeeExponent(BigDecimal x) {
         if (x == null || x.signum() == 0) return -1023;
         return Math.getExponent(x.doubleValue());
     }
-
 
     /** Decimal "ulp places": scale after stripping trailing zeros, clamped to >=0. */
     public static int getUlpPlaces(BigDecimal x) {
@@ -114,9 +102,7 @@ public final class SALTEUtils {
         return Math.max(scale, 0);
     }
 
-    // -------------------------------------------------------------------------
     // Mantissa bits computation (merge same idea)
-    // -------------------------------------------------------------------------
 
     /**
      * Encoder-side mantissa bits to keep (original getManSave BigDecimal version).
@@ -175,9 +161,7 @@ public final class SALTEUtils {
         return bits;
     }
 
-    // -------------------------------------------------------------------------
     // Mantissa extraction / build double
-    // -------------------------------------------------------------------------
 
     /**
      * Get the top numBits bits of IEEE754 mantissa (fraction) from a double.
@@ -192,7 +176,6 @@ public final class SALTEUtils {
         int shift = 52 - numBits;
         return mantissa >>> shift;
     }
-
 
     /**
      * Build a double from sign (0/1), unbiased exponent, and mantissaTop (top bits),
@@ -216,9 +199,7 @@ public final class SALTEUtils {
         return Double.longBitsToDouble(raw);
     }
 
-    // -------------------------------------------------------------------------
     // BigDecimal rounding helpers (decoder side)
-    // -------------------------------------------------------------------------
 
     /**
      * Quantize like "Decimal(str(val)).quantize(1e-ulp, ROUND_UP)".

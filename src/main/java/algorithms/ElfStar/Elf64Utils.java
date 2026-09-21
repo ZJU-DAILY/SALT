@@ -76,13 +76,6 @@ public class Elf64Utils {
 
 //        An overflow may occur resulting in an endless loop
 //        fix bug
-//        double temp = v * get10iP(i);
-//        long tempLong = (long) temp;
-//        while (tempLong != temp) {
-//            i++;
-//            temp = v * get10iP(i);
-//            tempLong = (long) temp;
-//        }
 
         double temp = v * get10iP(i);
         double tempLong = Math.floor(temp);

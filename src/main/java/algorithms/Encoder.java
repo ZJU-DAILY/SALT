@@ -66,7 +66,6 @@ public abstract class Encoder {
         return map;
     }
 
-
     public Map<String, Double> getMeta() {
         return meta;
     }

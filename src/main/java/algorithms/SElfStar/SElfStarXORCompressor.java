@@ -61,7 +61,6 @@ public class SElfStarXORCompressor {
 
     private int trailingBitsPerValue = 3;
 
-
     public SElfStarXORCompressor(StreamWriter out) {
         this.out = out;
     }
@@ -95,7 +94,6 @@ public class SElfStarXORCompressor {
         }
     }
 
-
     public void close() {
         if (updatePositions) {
             // we update distribution using the inner info
@@ -107,7 +105,6 @@ public class SElfStarXORCompressor {
         }
         writePositions = updatePositions;
     }
-
 
     private void compressValue(long value) {
         long xor = storedVal ^ value;

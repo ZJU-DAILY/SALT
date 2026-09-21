@@ -9,7 +9,6 @@ public class DoubleCamelDecoder extends Decoder {
     protected int size = DataTypeEnums.DOUBLE.getSize();
     protected long previous_integer = 0;
 
-
     protected boolean first = true;
 
     public DoubleCamelDecoder(String inputPath) {
@@ -55,7 +54,6 @@ public class DoubleCamelDecoder extends Decoder {
         }
 
         double dxor = (double) ldxor / CamelTools.quick_pow10(l);
-
 
         if (c1) {
             dxor = BinaryTools.xor(vd, 1 + dxor) - 1;

@@ -9,7 +9,6 @@ import java.util.Set;
 
 public class Preprocess {
 
-
     public static void main(String[] args) {
         String data_path = "./datasets/preprocess";
         String store_path = "./storage";
@@ -20,14 +19,13 @@ public class Preprocess {
                 AlgorithmEnums.GORILLA,
                 AlgorithmEnums.ElfPlus,
                 AlgorithmEnums.CHIMP,
-//                AlgorithmEnums.CHIMP128,
+
                 AlgorithmEnums.Elf,
                 AlgorithmEnums.Camel,
                 AlgorithmEnums.SALTE
         };
-//        String config_path = "./config.txt";
+
         String config_path = "";
-//        AlgorithmEnums[] methods = AlgorithmEnums.values();
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {

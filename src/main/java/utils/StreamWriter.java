@@ -47,7 +47,6 @@ public class StreamWriter {
         pointer = 0;
     }
 
-
     public int track_bits() {
         int b = delta_bits;
         this.delta_bits = 0;
@@ -61,7 +60,6 @@ public class StreamWriter {
         writeToDisk(data);
         init();
     }
-
 
     public void write(boolean b) {
         delta_bits += 1; // written bits

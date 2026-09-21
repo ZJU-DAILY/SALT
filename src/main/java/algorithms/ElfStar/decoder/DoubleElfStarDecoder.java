@@ -35,7 +35,6 @@ public class DoubleElfStarDecoder extends Decoder {
         root = HuffmanEncode.buildHuffmanTree(huffmanCode);
     }
 
-
     public Double nextValue() {
         Double v;
         Node current = root;

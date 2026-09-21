@@ -18,7 +18,6 @@ public class TableStreamer {
 
     private Serie[] series;
 
-
     public TableStreamer(String path) throws Exception {
         this.path = path;
         this.reload(path);
@@ -61,7 +60,7 @@ public class TableStreamer {
     public String get(int id) {
         String res = current_row.get(id);
 //        fill null
-//        if(res.isEmpty()) res = "0";
+
         return res;
     }
 

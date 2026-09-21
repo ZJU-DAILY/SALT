@@ -6,7 +6,6 @@ public enum DataTypeEnums {
     FLOAT("float", 32, Float.class),
     DOUBLE("double", 64, Double.class);
 
-
     private final String type;
     private final int size;
 

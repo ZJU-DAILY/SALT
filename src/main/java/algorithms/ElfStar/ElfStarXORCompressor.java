@@ -23,11 +23,9 @@ public class ElfStarXORCompressor{
 
     private int trailingBitsPerValue;
 
-
     public ElfStarXORCompressor(StreamWriter out) {
         this.out = out;
     }
-
 
     private int initLeadingRoundAndRepresentation(int[] distribution) {
         int[] positions = PostOfficeSolver.initRoundAndRepresentation(distribution, leadingRepresentation, leadingRound);
@@ -68,7 +66,6 @@ public class ElfStarXORCompressor{
             return 7;
         }
     }
-
 
     private int compressValue(long value) {
         int thisSize = 0;

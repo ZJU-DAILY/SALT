@@ -58,7 +58,6 @@ public class ElfStarXORDecompressor{
         }
     }
 
-
     public void refresh() {
         first = true;
         endOfStream = false;
@@ -92,7 +91,7 @@ public class ElfStarXORDecompressor{
             } else {
                 storedVal = 0;
             }
-//            endOfStream = storedVal == Elf64Utils.END_SIGN;
+
         } else {
             nextValue();
         }
@@ -107,7 +106,7 @@ public class ElfStarXORDecompressor{
             centerBits = 64 - storedLeadingZeros - storedTrailingZeros;
             value = in.readLong(centerBits) << storedTrailingZeros;
             value = storedVal ^ value;
-//            endOfStream = value == Elf64Utils.END_SIGN;
+
             storedVal = value;
         } else if (in.readInt(1) == 0) {
             // case 00
@@ -120,7 +119,7 @@ public class ElfStarXORDecompressor{
 
             value = in.readLong(centerBits) << storedTrailingZeros;
             value = storedVal ^ value;
-//            endOfStream = value == Elf64Utils.END_SIGN;
+
             storedVal = value;
         }
     }

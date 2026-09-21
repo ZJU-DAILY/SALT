@@ -30,7 +30,6 @@ public class DoubleALPEncoder extends Encoder {
         int a = 10 / n;
         int b = 1024 / m;
 
-
         Map<ALPTools.Pair, Integer> pair_map = new HashMap<>();
 
         for (int i = 0; i < n; i++) {
@@ -51,7 +50,7 @@ public class DoubleALPEncoder extends Encoder {
             }
         }
 
-        ALPTools.Pair[] combinations = new ALPTools.Pair[k]; //
+        ALPTools.Pair[] combinations = new ALPTools.Pair[k]; 
         List<Map.Entry<ALPTools.Pair, Integer>> list = new ArrayList<>(pair_map.entrySet());
 
         // 根据值对列表进行降序排序
@@ -98,10 +97,8 @@ public class DoubleALPEncoder extends Encoder {
             }
         }
 
-
         return best;
     }
-
 
     protected void FFOR(long[] enc_vec) {
         long minv = enc_vec[0];

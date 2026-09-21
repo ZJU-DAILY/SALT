@@ -1,7 +1,7 @@
 package org.example;
 
 import Experiment.TestBuilder;
-//import Experiment.TsfileTestBuilder;
+
 import enums.AlgorithmEnums;
 import enums.DataTypeEnums;
 
@@ -9,27 +9,18 @@ import java.util.*;
 
 public class Main {
 
-
     public static void main(String[] args) {
         String data_path = "./datasets/Overall";
         String store_path = "./storage";
         String result_path = "./results/Overall";
         AlgorithmEnums[] methods = new AlgorithmEnums[]{
-//                AlgorithmEnums.ALP,
-//                AlgorithmEnums.DeXOR,
-//                AlgorithmEnums.GORILLA,
-//                AlgorithmEnums.ElfPlus,
-//                AlgorithmEnums.CHIMP,
-//                AlgorithmEnums.CHIMP128,
-//                AlgorithmEnums.Elf,
-//                AlgorithmEnums.ElfStar,
-//                AlgorithmEnums.Camel,
+
                 AlgorithmEnums.SALTE,
-//                  AlgorithmEnums.SALTSQL
+                AlgorithmEnums.Kangaroo,        // Fast, W=32
+
         };
-//        String config_path = "./config.txt";
+
         String config_path = "";
-//        AlgorithmEnums[] methods = AlgorithmEnums.values();
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {

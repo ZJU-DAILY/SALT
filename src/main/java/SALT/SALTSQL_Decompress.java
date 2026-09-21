@@ -117,8 +117,6 @@ public class SALTSQL_Decompress {
         return result.doubleValue();
     }
 
-
-
     // ================= NEW: Decompress .bin bitstream (no record length) =================
     public static void runDecompressBinStream() throws Exception {
         File dir = new File(".");
@@ -334,7 +332,6 @@ public class SALTSQL_Decompress {
 
         }
     }
-
 
     /**
      * 对齐 encoder 的 getManSave(BigDecimal x) 公式，但不依赖 x 本身：
@@ -753,7 +750,6 @@ public class SALTSQL_Decompress {
     }
 
 // ================= END NEW CODE =================
-
 
     public static void main(String[] args) throws Exception {
         runDecompressBinStream();

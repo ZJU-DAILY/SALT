@@ -97,146 +97,40 @@ public class DoubleCamelEncoder extends Encoder {
 
 // source code https://github.com/yoyo185644/camel
 
-//public int countDecimalPlaces(BigDecimal value) {
-//    String valueStr = value.toString();
-//    int decimalPointIndex = valueStr.indexOf('.');
-//
-//    if (decimalPointIndex >= 0) {
-//        return valueStr.length() - decimalPointIndex - 1;
 //    } else {
-//        // No decimal point, so there are no decimal places
-//        return 0;
-//    }
-//}
 
-//private int compressDecimalValue(long decimal_value, int decimal_count) {
-//    // 计算小数位数
 //    out.writeInt(decimal_count-1, 2); // 保存字节数 00-1 01-2 10-3 11-4
-//    size += 2;
-//    // 计算m的值
-//    long thread = threshold[decimal_count-1];
-//    int m = (int) decimal_value;
-//    size += 1;
-//    if (decimal_value - thread >= 0) {  // 计算m的值
-//        // 标志位：是否计算m的值
-//        out.writeBit(true);
-//        m = (int) (decimal_value % thread);
-//        // 对于m进行XOR操作
-//        long xor = (Double.doubleToLongBits((double)decimal_value/powers[decimal_count-1]+1)) ^ Double.doubleToLongBits(((double) m/powers[decimal_count-1]+1));
-//        // 保存小数位数长度的centerBits 保存decimal_count （四位最多就是1000）
-//        out.writeLong(xor >>> 52 - decimal_count, decimal_count);
-//        size += decimal_count;// Store the meaningful bits of XOR
-//
-//    } else {  // m就为原来的值
-//        out.writeBit(false);
-//    }
-//
-//    // 保存m的值
-//    if (decimal_count == 1) { // 如果是1 直接往后读decimal_count+1位
-//        out.writeInt(m, 3);
-//        size += 3;
-//        return this.size;
-//    }
-//    if (decimal_count ==2) {
-//        if (m < 8) {
-//            out.writeInt(0, 1);
-//            out.writeInt(m, 3);
-//            size += 4;
-//            return this.size;
-//        }  else {
-//            out.writeInt(1, 1);
-//            out.writeInt(m-8, 4); // "bug here" by lcy
-//            size += 5;
-//            return this.size;
-//        }
-//    }
-//    if (decimal_count == 3) {
-//        if (m < 2) {
-//            out.writeInt(0, 2);
-//            out.writeInt(m, 1);
-//            size += 3;
-//            return this.size;
-//        }else if (m < 8){
-//            out.writeInt(1, 2);
-//            out.writeInt(m, 3);
-//            size += 5;
-//            return this.size;
-//        }else if (m < 32) {
-//            out.writeInt(2, 2);
-//            out.writeInt(m, 5);
-//            size += 7;
-//            return this.size;
-//        }else {
-//            out.writeInt(3, 2);
-//            out.writeInt(m, mValueBits[decimal_count-1]);
-//            size += 2;
-//            size += mValueBits[decimal_count-1];
-//            return this.size;
-//        }
-//    }
-//    if (decimal_count >= 4){
-//        if (m < 16) {
-//            out.writeInt(0, 2);
-//            out.writeInt(m, 4);
-//            size += 6;
-//            return this.size;
-//        }else if (m < 64){
-//            out.writeInt(1, 2);
-//            out.writeInt(m, 6);
-//            size += 8;
-//            return this.size;
-//        }else if (m < 256) {
-//            out.writeInt(2, 2);
-//            out.writeInt(m, 8);
-//            size += 10;
-//            return this.size;
-//        }else {
-//            out.writeInt(3, 2);
-//            out.writeInt(m, mValueBits[decimal_count-1]);
-//            size += 2;
-//            size += mValueBits[decimal_count-1];
-//            return this.size;
-//        }
-//
-//    }
-//
-//    return this.size;
-//
-//}
 
-//private int compressIntegerValue(long int_value) {
-//
-//    int diff = (int)(int_value - storedVal) ;
-//    size += 2;
-//    storedVal = int_value;
-//    if (diff >= -1 && diff <= 1) {
+//        size += decimal_count;// Store the meaningful bits of XOR
+
+//    } else {  // m就为原来的值
+
+//        }  else {
+
+//            out.writeInt(m-8, 4); // "bug here" by lcy
+
+//        }else if (m < 8){
+
+//        }else if (m < 32) {
+
+//        }else {
+
+//        }else if (m < 64){
+
+//        }else if (m < 256) {
+
+//        }else {
+
 //        out.writeInt((diff + 1), 2); // Map -1 to 0, 0 to 1, 1 to 2 respectively
-//        return this.size;
+
 //    } else{
 //        out.writeInt(3, 2); // //11
-//        if (diff < 0){
-//            out.writeBit(false);
-//            diff = -diff;
+
 //        } else {
-//            out.writeBit(true);
-//
-//        }
-//        size += 1;
-//        if (diff >=2 && diff < 8) { // [4,8)
+
 //            out.writeInt(0, 1); // 0
-//            out.writeInt(diff, 3);
-//            size += 4;
-//            return this.size;
+
 //        } else {
 //            out.writeInt(1, 1); //1  // [8,...)
 //            out.writeInt(diff, 16); // 暂用16个字节表示
-//            size += 17;
-//            return this.size;
-//        }
-//    }
-//
-//
-////        return this.size;
-//
-//
-//}
+

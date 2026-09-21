@@ -69,8 +69,6 @@ public class SALTSQL {
         return decimals.toArray(new BigDecimal[0]);
     }
 
-
-
     // 取得 IEEE754 双精度 无偏指数（与 Python get_ieee_exponent 一致：返回 unbiased）
     static int getIeeeExponent(BigDecimal x) {
         if (x == null || x.signum() == 0) {
@@ -80,7 +78,6 @@ public class SALTSQL {
         return Math.getExponent(d); // Java 1.5+ 自带方法，相当于 doubleToRawLongBits 的指数
     }
 
-
     // 统计十进制小数位数（对应 Python 的 Decimal(...).normalize() 再看 exponent）
     static int getUlpPlaces(BigDecimal x) {
         if (x == null) return 0;
@@ -88,8 +85,6 @@ public class SALTSQL {
         int scale = stripped.scale();
         return Math.max(scale, 0);
     }
-
-
 
     // 计算需要保存的尾数位数（对应 Python 的 get_man_save）
     static int getManSave(BigDecimal x) {
@@ -124,8 +119,6 @@ public class SALTSQL {
             throw new IllegalArgumentException("Arguments cannot be null");
         }
         // 去除多余的尾随 0
-//        a = a.stripTrailingZeros();
-//        b = b.stripTrailingZeros();
 
         // 获取两个数的有效小数位数（精度）
         int pa = Math.max(a.scale(), 0);
@@ -222,7 +215,6 @@ public class SALTSQL {
         return String.format("%" + length + "s", s).replace(' ', '0');
     }
 
-
     // ==================== 新增：把整个数组当成一个 window，压缩为 01String ====================
     // 规则与 main 中 windowStart / delta 的编码保持一致
     public static String encodeAsOneWindow01String(List<BigDecimal> datas, int exponentBits, int ulpBits) {
@@ -306,8 +298,6 @@ public class SALTSQL {
         return out.toString();
     }
 
-
-
     public static final class BitOutputStream implements Closeable {
         private final OutputStream out;
         private int currentByte = 0;
@@ -371,7 +361,6 @@ public class SALTSQL {
         }
     }
 
-
     private static long[] buildFenwickFromLengths(List<Integer> windowLens) {
         int n = windowLens.size();
         long[] bit = new long[n + 1]; // 1-indexed
@@ -400,7 +389,6 @@ public class SALTSQL {
         }
     }
 
-
     // 额外输出：每个 window 实际使用 bits 数量文件
     private static void writeWindowBitsUsedFile(String fileName, List<Long> windowBitCounts, int winBitsBits) throws IOException {
         try (BitOutputStream out = new BitOutputStream(new BufferedOutputStream(new FileOutputStream(fileName)))) {
@@ -414,7 +402,6 @@ public class SALTSQL {
             }
         }
     }
-
 
     // 根据 window bits 数量构建 Fenwick 树（1-indexed）
     private static long[] buildFenwickFromLongs(List<Long> values) {
@@ -446,16 +433,12 @@ public class SALTSQL {
         }
     }
 
-
-
     public static void main(String[] args) throws Exception {
         File dir = new File("datasets/forCRUD");
         if (!dir.isDirectory()) {
             System.err.println("dataset/ 目录不存在。请将 CSV 文件放在 dataset/ 下。");
             return;
         }
-
-
 
         // args[0]: windowLenBits, args[1]: fenwickBits, args[2]: windowBitsBits, args[3]: bitsFenwickBits（均可选）
         int winLenBits = WIN_NUM_BITS_DEFAULT;
@@ -586,7 +569,6 @@ public class SALTSQL {
                                 int manSave=getManSave(delta);
                                 str+=getDoubleMantissaBits(delta.doubleValue(),manSave);
 
-
                             }
                         }
 
@@ -716,7 +698,6 @@ public class SALTSQL {
 
                                 int manSave=getManSave(delta);
                                 str+=getDoubleMantissaBits(delta.doubleValue(),manSave);
-
 
                             }
                         }

@@ -34,7 +34,6 @@ public class HuffmanEncode {
         return huffmanCodes;
     }
 
-
     private static void generateHuffmanCodes(Code[] huffmanCodes, Node root, int code, int length) {
         if (root != null) {
             if (root.data >= 0) {

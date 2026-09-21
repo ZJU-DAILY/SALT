@@ -7,7 +7,6 @@ import algorithms.ElfStar.encoder.DoubleElfStarEncoder;
 import algorithms.Encoder;
 import enums.DataTypeEnums;
 
-
 public class ElfStar extends Algorithm {
     public ElfStar() {
         // Encoder

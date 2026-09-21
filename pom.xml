@@ -14,8 +14,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <!-- The TsFile experiment requires the customized fork bundled with this repository. -->
-        <salt.compiler.exclude>Experiment/TsfileTestBuilder.java</salt.compiler.exclude>
     </properties>
 
     <dependencies>
@@ -35,14 +33,26 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>kangaroo-source</id><phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration><sources><source>${project.basedir}/kangaroo-java/src/main/java</source></sources></configuration>
+                    </execution>
+                    <execution>
+                        <id>kangaroo-tests</id><phase>generate-test-sources</phase>
+                        <goals><goal>add-test-source</goal></goals>
+                        <configuration><sources><source>${project.basedir}/kangaroo-java/src/test/java</source></sources></configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
-                <configuration>
-                    <excludes>
-                        <exclude>${salt.compiler.exclude}</exclude>
-                    </excludes>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -70,19 +80,4 @@
         </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>custom-tsfile</id>
-            <properties>
-                <salt.compiler.exclude>__no_excluded_source__.java</salt.compiler.exclude>
-            </properties>
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.tsfile</groupId>
-                    <artifactId>tsfile</artifactId>
-                    <version>2.2.0-SNAPSHOT</version>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 </project>

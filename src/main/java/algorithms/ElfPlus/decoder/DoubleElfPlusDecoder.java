@@ -58,7 +58,6 @@ public class DoubleElfPlusDecoder extends Decoder {
 
     }
 
-
     @Override
     public double decodeDouble() {
         if (first) {

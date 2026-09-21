@@ -33,10 +33,8 @@ Run the regression tests with:
 mvn test
 ```
 
-The default build excludes `Experiment.TsfileTestBuilder`, which depends on a
-customized TsFile fork rather than the public release. See
-`third_party/tsfile/README.md` to reconstruct it, then include the optional
-experiment with `mvn -Pcustom-tsfile clean package`.
+Unused TsFile integration and CRUD benchmark drivers are archived under `abortion/`.
+The default build retains the original SALT/baseline entry points and CRUD implementation.
 
 ## Compression benchmark
 
@@ -55,6 +53,43 @@ The current implementation names the core codec `SALTE` and the indexed
 extension `SALTSQL`. These internal names will be aligned with the paper names
 `SALT` and `SALT+` in a compatibility-preserving cleanup.
 
+## Shared, checked benchmark (including Kangaroo)
+
+The independent Kangaroo Java implementation is now registered alongside DeXOR
+and SALTE as `Kangaroo` (Fast) and `KangarooCompact`. The root Maven build includes
+the sources and tests from `kangaroo-java`; no separate install is needed.
+Both adapters use the existing `StreamWriter` / `StreamReader` file I/O and retain
+byte-identical KGRJ v1 output. They do not apply DeXOR preprocessing.
+
+For new comparisons, use the checked driver:
+
+```bash
+java -Xms1g -Xmx1g -cp target/salt-1.0-SNAPSHOT-all.jar Experiment.CheckedBenchmark \
+  datasets/Overall results/shared-new-run 1000 3 7 \
+  SALTE,DeXOR,Kangaroo,KangarooCompact 1 no
+```
+
+The output directory must not exist, and its parent must exist. Arguments after
+the directory are block size (0 = whole file), warmup passes, measured passes,
+comma-separated methods, zero-based numeric column and explicit header policy.
+The driver accepts a CSV file or the immediate CSV files in a directory.
+It writes `summary.csv`, `rounds.csv`, `protocol.txt`, and temporary streams.
+It retains the first numeric row and short final block, rejects missing input,
+includes codec construction/finalization/flush and file I/O in both timers,
+uses MB = 1,000,000 bytes, and compares raw bits after timing (signed zeros are
+accepted as numerically equal and counted). Failed codecs have a failure status
+and no valid throughput result. CSV loading and verification are not timed.
+
+This is a file-I/O benchmark (including OS page-cache effects), not a pure codec
+benchmark. Kangaroo's adapter includes its existing memory buffering and the
+copy to/from shared streams. Compression sizes include each codec's own framing.
+The earlier standalone memory throughput numbers must not be mixed with these
+results. See [integration notes](docs/kangaroo-integration.md).
+
+The legacy `Main`/`TestBuilder` entry also recognizes `-m Kangaroo`, but retains
+its original header skipping, timing and validation behavior for reproducibility;
+use the checked driver for new comparisons.
+
 ## Binary layout
 
 This section documents the current formats produced by the Java implementations
@@ -63,7 +98,12 @@ versioned interchange specification. Unless stated otherwise, fields are packed
 MSB-first without byte alignment, and the final byte is padded with zero bits.
 All widths below are in **bits**.
 
-### SALT stream
+### SALT stream (legacy mode)
+
+RAW is enabled by default, with a 10,000-value internal block. The enabled format
+adds a mode marker and reserves RAW alongside ESC and ZERO; see
+[`docs/salt-raw-guard.md`](docs/salt-raw-guard.md) for the active format.
+The layout below describes the legacy mode selected by `-Dsalt.raw.enabled=false`.
 
 The benchmark codec implemented by
 [`DoubleOurEEncoder`](src/main/java/algorithms/SALTE/encoder/DoubleOurEEncoder.java)
@@ -85,7 +125,7 @@ The codebook segments are embedded at the periodic boundaries determined by
 | `WIN_BITS` | 4 | 2 | Width of a reference index; the sliding window contains $2^{WIN\_BITS}=4$ candidates. |
 | `EXPONENT_BITS` | 4 | 3 | Width of a normal exponent transition. |
 | `ULP_BITS` | 4 | 2 | Width of a normal decimal-precision transition. |
-| `BLOCK_SIZE` | 20 | 30,000 | Codebook refresh period. |
+| `BLOCK_SIZE` | 20 | 10,000 | Codebook refresh period. |
 
 The SALT header is therefore exactly **32 bits (4 bytes)**. The benchmark
 stream does not store the number of records; its decompression driver obtains
@@ -235,8 +275,6 @@ an updated value exceeds one of these fixed-width fields.
 
 The following Java entry points implement the main paper experiments:
 
-- `Experiment.RangeQueryBenchmark`
-- `Experiment.AggregateQueryBenchmark`
 - `Experiment.CodebookDistributionExperiment`
 - `org.example.Precision`
 - `org.example.Preprocess`
@@ -255,11 +293,20 @@ temporary files, IDE metadata, and local paper drafts are excluded. See
 ## Third-party software
 
 The `ALP/` directory contains the canonical ALP baseline configured with
-16-value vectors. The customized Apache TsFile experiment is
-optional and documented under `third_party/tsfile`.
+16-value vectors. The optional customized TsFile experiment and its setup files
+are archived under `abortion/files/`.
 
 ## License and citation
 
 License and citation metadata will be added after confirmation by the authors
 and the laboratory. Third-party components remain subject to their respective
 licenses.
+
+## Local archive
+
+`abortion/` contains removed files at their original relative paths under `files/`,
+plus originals of edited files under `before-cleanup/`. It is excluded from Git.
+The move list and restoration instructions are in `abortion/README.md`.
+Only the timing `main` was removed from `SALTSQL_CRUD`; its query, modification,
+rewrite, and index-update methods were retained without changing their behavior.
+This cleanup does not complete missing persistence calls in the modification paths.

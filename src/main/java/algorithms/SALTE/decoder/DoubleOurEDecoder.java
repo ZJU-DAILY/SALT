@@ -16,6 +16,7 @@ public class DoubleOurEDecoder extends Decoder {
 
     // meta
     private boolean headerRead = false;
+    private boolean rawEnabled = false;
     private int WIN_BITS;
     private int EXPONENT_BITS;
     private int ULP_BITS;
@@ -66,7 +67,7 @@ public class DoubleOurEDecoder extends Decoder {
 
         BigDecimal delta;
 
-        if (blockCount < BLOCK_SIZE - 1) {
+        if (!rawEnabled && blockCount < BLOCK_SIZE - 1) {
             // warmup:
             // [WIN][zeroFlag:1] OR [WIN][0][sign][expDelta][(exp11?)] [ulpDelta][(ulpPlaces4?)] [mantissaTopBits]
             boolean zeroFlag = in.readBoolean();
@@ -94,6 +95,7 @@ public class DoubleOurEDecoder extends Decoder {
 
             int zeroCode = (1 << minCountBits) - 1;
             int escapeCode = (1 << minCountBits) - 2;
+            if (rawEnabled && code == (1 << minCountBits) - 3) return readRaw();
 
             if (code == zeroCode) {
                 delta = BigDecimal.ZERO;
@@ -140,12 +142,16 @@ public class DoubleOurEDecoder extends Decoder {
         return value.doubleValue();
     }
 
-    // ---------------------------------------------------------------------
     // Header + init
-    // ---------------------------------------------------------------------
 
     private void readHeaderAndInit() {
         WIN_BITS = in.readInt(4);
+        if (WIN_BITS == 15) {
+            int version = in.readInt(4);
+            if (version != 2) throw new IllegalArgumentException("Unsupported SALTE RAW version: " + version);
+            rawEnabled = true;
+            WIN_BITS = in.readInt(4);
+        }
         EXPONENT_BITS = in.readInt(4);
         ULP_BITS = in.readInt(4);
         BLOCK_SIZE = in.readInt(20);
@@ -160,17 +166,15 @@ public class DoubleOurEDecoder extends Decoder {
         blockCount = 0;
 
         codebook.clear();
-        minCountBits = 0;
+        minCountBits = rawEnabled ? 2 : 0;
 
         headerRead = true;
     }
 
-    // ---------------------------------------------------------------------
     // Codebook segment
     // Format:
     //   [minCountBits:5][size:16]
     //   each entry: [sign:1][ulpDelta:5 sign-mag][expDelta:11 sign-mag]
-    // ---------------------------------------------------------------------
 
     private void readCodebookSegment() {
         minCountBits = in.readInt(5);
@@ -191,9 +195,7 @@ public class DoubleOurEDecoder extends Decoder {
         }
     }
 
-    // ---------------------------------------------------------------------
     // Delta-field decoding helpers (match encoder rules)
-    // ---------------------------------------------------------------------
 
     /**
      * Decode exponent:
@@ -212,6 +214,12 @@ public class DoubleOurEDecoder extends Decoder {
         long exp11Bits = in.readLong(CODEBOOK_EXP_BITS);
         SALTEUtils.SignMag exp11 = SALTEUtils.decodeSignMagnitudeBits(exp11Bits, CODEBOOK_EXP_BITS);
         return exp11.value;
+    }
+
+    private double readRaw() {
+        double value = Double.longBitsToDouble(in.readLong(64));
+        blockCount++; // RAW consumes a record, but never changes reference/delta windows.
+        return value;
     }
 
     /**

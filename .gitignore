@@ -47,3 +47,9 @@ CMakeCache.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local archive of removed files and pre-cleanup backups
+/datasets/*
+!/datasets/Overall/
+/results/
+/abortion/

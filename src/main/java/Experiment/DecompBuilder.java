@@ -17,7 +17,6 @@ public class DecompBuilder {
     private static final double[] EPS = new double[]{1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12,
             1e-13, 1e-14, 1e-15, 1e-16, 1e-17, 1e-18, 1e-19, 1e-20, 1e-21, 1e-22, 1e-23};
 
-
     private final Decoder decoder;
     private final TableStreamer table;
 
@@ -29,7 +28,6 @@ public class DecompBuilder {
 
     private String table_name;
 
-
     private long total = 0;
     private long error_id = 0;
 
@@ -40,7 +38,6 @@ public class DecompBuilder {
         return info;
     }
 
-
     final int WINDOW = 100;
     final double BYTES_PER_VALUE = 8.0; // 默认 8 字节
 
@@ -49,11 +46,6 @@ public class DecompBuilder {
 
     double minMBps = Double.POSITIVE_INFINITY;
     double maxMBps = 0.0;
-
-
-
-
-
 
     public DecompBuilder(DataTypeEnums dataType, String algorithm_name, String table_name, String table_path, String input_path, String config_path) throws Exception {
         this.dataType = dataType;
@@ -86,7 +78,6 @@ public class DecompBuilder {
         }
         return null;
     }
-
 
     //todo add other types
     public void test_decompress() {
@@ -141,11 +132,6 @@ public class DecompBuilder {
                     winNs = 0;
                 }
 
-//                if (Math.abs(v - dec_v) >= eps && place <13) {
-//                    error_id = total;
-//                    System.out.println("Error happened at " + error_id + " with v=" + v + " in " + algorithm_name + " and decompress result is " + dec_v);
-//                    break;
-//                }
                 table.next();
             } catch (Exception e) {
                 break;

@@ -47,7 +47,6 @@ public class CompBuilder {
     // max bits with cap: only record if <= 100
     private double compBitsMaxCapped = 0.0;
 
-
     public CompBuilder(DataTypeEnums dataType, String algorithm_name, String table_name, String table_path, String output_path, String config_path) throws Exception {
         this.dataType = dataType;
         this.algorithmName = algorithm_name;
@@ -106,7 +105,6 @@ public class CompBuilder {
         info.put("comp_time", result_format(finish_time));
         info.put("comp_bits", result_format(comp_bits));
 
-
         // avg speed: 总输入字节 / 总耗时
         double totalBytes = total * (dataType.getSize() / 8.0);
         double avgMBps = 0.0;
@@ -124,13 +122,11 @@ public class CompBuilder {
         info.put("comp_bits_min", result_format(compBitsMin));
         info.put("comp_bits_max_le_100", result_format(compBitsMaxCapped));
 
-
         Map<String, Double> meta = encoder.getMeta();
         for (String key : meta.keySet()) {
             info.put(key, result_format(meta.get(key)));
         }
     }
-
 
     //todo add other types
     public void compress() {
@@ -144,7 +140,6 @@ public class CompBuilder {
         System.out.println(tableName);
         while (true) {
             try {
-
 
                 double v = table.getDouble(1);
 

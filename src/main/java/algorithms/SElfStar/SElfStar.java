@@ -7,7 +7,6 @@ import algorithms.SElfStar.decoder.DoubleSElfStarDecoder;
 import algorithms.SElfStar.encoder.DoubleSElfStarEncoder;
 import enums.DataTypeEnums;
 
-
 public class SElfStar extends Algorithm {
     public SElfStar() {
         // Encoder
