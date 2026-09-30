@@ -192,26 +192,38 @@ Despite their historical names, `window_num` stores record counts and
 
 #### Main compressed file
 
-```text
-+---------------------+----------+----------+-----+----------+
-| 12-bit header       | window 0 | window 1 | ... | window T-1|
-+---------------------+----------+----------+-----+----------+
-```
+New SALT+ files use a **20-bit versioned header**:
+`marker=0:4 | version=1:4 | WIN_BITS:4 | EXPONENT_BITS:4 | ULP_BITS:4`.
+The default parameter values are 7, 5, and 2, giving 128 records per initial
+window. Windows are concatenated without byte alignment, starting at bit 20.
+Legacy files with a nonzero first nibble retain their 12-bit header and can
+still be read. Re-encode legacy files before CRUD modification; formats cannot
+be mixed within one file. Standalone file decompression uses the record-count
+sidecar to distinguish records from byte padding.
 
-The header contains `WIN_BITS` (4 bits), `EXPONENT_BITS` (4 bits), and
-`ULP_BITS` (4 bits). Their defaults are 7, 5, and 2, respectively, so the
-initial window size is $2^7=128$ records. The logical header size is **12 bits
-(1.5 bytes)**; window data starts at bit offset 12, midway through the second
-physical byte.
+The fixed codebook follows the paper's SALT+ design: `RAW=01`, `ESC=10`, and
+`ZERO=11` (`00` is invalid). Every record, including ZERO and RAW, contributes
+to the window's record count and stored bit length.
 
-Windows are independently decodable and concatenated without alignment. The
-first record of each window is encoded as either a one-bit zero flag or
-`[zero=0][sign][precision:4][exponent:11][mantissa prefix]`. Later records are
-encoded relative to the first value as either a one-bit zero-delta flag or
-`[zero=0][sign][Delta precision][exponent mode][exponent][mantissa prefix]`.
-An overflowed precision transition is followed by a 4-bit absolute precision;
-the one-bit exponent mode selects either the normal `EXPONENT_BITS` field or an
-11-bit exponent field.
+- **RAW:** the two-bit codeword followed by the original 64-bit double, with
+  no structural fields. It is used if ordinary encoding cannot reconstruct
+  the input exactly; signed zeros are treated as equivalent.
+- **ZERO:** no payload. At the start of a window it represents zero; otherwise
+  it represents the fixed reference value (zero residual).
+- **ESC:** for the first record, sign, absolute precision (4 bits), absolute
+  exponent (11-bit sign-magnitude), and mantissa prefix. Later records encode
+  the residual's sign and precision/exponent transitions relative to the
+  window's first value, followed by the mantissa prefix. Transition fields use
+  `ULP_BITS` and `EXPONENT_BITS`; the sign-magnitude negative-zero sentinel
+  introduces a 4-bit absolute precision or 11-bit absolute exponent.
+
+The encoder verifies the complete candidate record with the shared decoder
+before accepting it, including field representability and final reconstruction.
+The first value remains the window reference even when stored as RAW; subsequent
+ZERO/RAW records never replace it. The sequential double API also preserves
+non-finite values through RAW (a non-finite first value requires RAW for all
+following values in that window). The indexed CRUD API uses `BigDecimal` and
+supports finite binary64 values, not NaN or infinity.
 
 #### Index sidecars
 
@@ -231,15 +243,15 @@ payload:
 |---|---:|---|
 | `_window_num.bin` | 9 | `cnt[i]`, the current number of records in window `i` |
 | `_num_fenwick.bin` | 32 | Fenwick node `F_cnt[i+1]` |
-| `_window_len.bin` | 13 | `bitlen[i]`, the compressed length of window `i` |
+| `_window_len.bin` | 14 | `bitlen[i]`, the compressed length of window `i` |
 | `_len_fenwick.bin` | 32 | Fenwick node `F_bitlen[i+1]` |
 
 For `T` windows, a sidecar with width `q` occupies
 `ceil((40 + qT) / 8)` bytes. With the default widths, the four index payloads
-use **86 bits per window**, and their combined physical size is
+use **87 bits per window**, and their combined physical size is
 
 ```text
-20 + 8T + ceil(9T/8) + ceil(13T/8) bytes,
+20 + 8T + ceil(9T/8) + ceil(14T/8) bytes,
 ```
 
 including the four 5-byte headers and per-file byte padding. The current Java
@@ -254,7 +266,7 @@ For a zero-based logical position `p`, SALT+ performs a lower-bound search on
 intra-window record offset. The corresponding physical location is
 
 ```text
-window_bit_offset = 12 + prefix_sum(F_bitlen, window_id)
+window_bit_offset = header_bits + prefix_sum(F_bitlen, window_id)
 window_bit_length = bitlen[window_id].
 ```
 
@@ -265,7 +277,7 @@ length changes, replacing its packed segment may still shift subsequent bits
 in the main file.
 
 With the current default widths, an individual window can store at most 511
-records and 8,191 compressed bits, while each 32-bit Fenwick node can store at
+records and 16,383 compressed bits, while each 32-bit Fenwick node can store at
 most $2^{32}-1$. A CRUD operation fails rather than silently overflowing when
 an updated value exceeds one of these fixed-width fields.
 

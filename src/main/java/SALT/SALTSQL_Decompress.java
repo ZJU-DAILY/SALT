@@ -1,5 +1,7 @@
 package SALT;
 
+import algorithms.SALTSQL.SALTSQLRawCodec;
+
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -8,28 +10,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Decompressor for files encoded by Our_SQL.java.
- *
- * File format:
- *  - First line: 12 bits header = WIN_BITS(4) + EXPONENT_BITS(4) + ULP_BITS(4)
- *  - Each subsequent line: one record bitstring
- *
- * Block format (winSize = 1 << WIN_BITS):
- *  A) First record in each block (idx % winSize == 0):
- *     - zeroFlag(1): '1' => value = 0 ; '0' => non-zero value
- *     - if non-zero: sign(1) + ulpPlaces(4, unsigned) + exponent(11, sign-magnitude) + mantissaBits(rest)
- *
- *  B) Other records in block:
- *     - zeroFlag(1): '1' => delta = 0 (value == firstValue) ; '0' => non-zero delta
- *     - if non-zero:
- *         sign(1)
- *         ulpDelta(sign-magnitude, ULP_BITS). If it is "-0" overflow marker, read ulpPlaces(4, unsigned) next.
- *         expFlag(1): '0' => exponent uses EXPONENT_BITS ; '1' => exponent uses 11
- *         exponent(sign-magnitude, EXPONENT_BITS or 11)
- *         mantissaBits(rest)
- *
- * The sign-magnitude "-0" (sign bit 1 and all-zero magnitude) is used as overflow marker,
- * same as OurDecompress.
+ * Reads versioned ZERO/ESC/RAW SALT+ files and legacy 12-bit-header files.
+ * New window and aggregate APIs share SALTSQLRawCodec; legacy parsing is explicit.
  */
 public class SALTSQL_Decompress {
 
@@ -158,6 +140,31 @@ public class SALTSQL_Decompress {
         System.out.println("Done.");
     }
 
+    private static void decodeRawStream(BitInput in, File file, PrintWriter out, int version, int winBits) throws IOException {
+        if (version != SALTSQLRawCodec.VERSION) throw new IOException("Unsupported SALT+ version");
+        Integer exp = in.readBitsAsIntOrNull(4), ulp = in.readBitsAsIntOrNull(4);
+        if (exp == null || ulp == null) throw new EOFException("Truncated SALT+ header");
+        int[] counts = tryLoadWindowLengths(file);
+        if (counts == null) throw new IOException("SALT+ file decoding requires *_window_num.bin to distinguish padding from records");
+        SALTSQLRawCodec.Reader reader = width -> {
+            long value = 0;
+            for (int i = 0; i < width; i++) {
+                Integer bit = in.readBitsAsIntOrNull(1);
+                if (bit == null) throw new EOFException("Truncated SALT+ record");
+                value = (value << 1) | bit;
+            }
+            return value;
+        };
+        for (int count : counts) {
+            BigDecimal reference = null;
+            for (int i = 0; i < count; i++) {
+                double value = SALTSQLRawCodec.decode(reader, reference, i == 0, exp, ulp);
+                if (i == 0) reference = SALTSQLRawCodec.reference(value);
+                out.println(Double.toString(value));
+            }
+        }
+    }
+
     public static void decompressBinStreamFile(File binFile, File outCsv) throws Exception {
         try (InputStream fis = new BufferedInputStream(new FileInputStream(binFile));
              PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outCsv), StandardCharsets.UTF_8))) {
@@ -170,6 +177,10 @@ public class SALTSQL_Decompress {
             Integer ulpBitsI = in.readBitsAsIntOrNull(4);
             if (winBitsI == null || expBitsI == null || ulpBitsI == null) {
                 System.err.println("Empty/invalid .bin (missing 12-bit meta): " + binFile.getName());
+                return;
+            }
+            if (winBitsI == 0) {
+                decodeRawStream(in, binFile, out, expBitsI, ulpBitsI);
                 return;
             }
             int WIN_BITS = winBitsI;
@@ -460,7 +471,50 @@ public class SALTSQL_Decompress {
         }
     }
 
-    public static List<BigDecimal> decompressOneWindow01Stream(String bitStream01,
+    public static List<BigDecimal> decompressOneWindow01Stream(String bits, int exp, int ulp) throws IOException {
+        return decompressOneWindow01Stream(bits, exp, ulp, true);
+    }
+
+    public static List<BigDecimal> decompressOneWindow01Stream(String bits, int exp, int ulp, boolean rawFormat) throws IOException {
+        if (!rawFormat) return decompressLegacyWindow(bits, exp, ulp);
+        List<BigDecimal> values = new ArrayList<>();
+        if (bits == null || bits.isEmpty()) return values;
+        SALTSQLRawCodec.Bits in = new SALTSQLRawCodec.Bits(bits);
+        BigDecimal reference = null;
+        boolean first = true;
+        while (in.hasRemaining()) {
+            double value = SALTSQLRawCodec.decode(in, reference, first, exp, ulp);
+            if (!Double.isFinite(value)) throw new IOException("BigDecimal window API cannot represent NaN or infinity");
+            values.add(BigDecimal.valueOf(value));
+            if (first) reference = SALTSQLRawCodec.reference(value);
+            first = false;
+        }
+        return values;
+    }
+
+    public static WindowAggregateResult aggregateOneWindow01Stream(String bits, int exp, int ulp,
+            int from, int to, int operation) throws IOException {
+        return aggregateOneWindow01Stream(bits, exp, ulp, from, to, operation, true);
+    }
+
+    public static WindowAggregateResult aggregateOneWindow01Stream(String bits, int exp, int ulp,
+            int from, int to, int operation, boolean rawFormat) throws IOException {
+        if (!rawFormat) return aggregateLegacyWindow(bits, exp, ulp, from, to, operation);
+        if (from < 0 || to < from || operation < 0 || operation > 3) throw new IllegalArgumentException("Invalid aggregate request");
+        SALTSQLRawCodec.Bits in = new SALTSQLRawCodec.Bits(bits == null ? "" : bits);
+        BigDecimal reference = null;
+        int count = 0, selected = 0;
+        double result = initialAggregate(operation);
+        while (in.hasRemaining()) {
+            double value = SALTSQLRawCodec.decode(in, reference, count == 0, exp, ulp);
+            if (count == 0) reference = SALTSQLRawCodec.reference(value);
+            if (count >= from && count < to) { result = addAggregate(operation, result, value); selected++; }
+            count++;
+        }
+        return new WindowAggregateResult(count, selected, result);
+    }
+
+    private static List<BigDecimal> decompressLegacyWindow(String bitStream01,
                                                                int EXPONENT_BITS,
                                                                int ULP_BITS) throws IOException {
         if (bitStream01 == null) return Collections.emptyList();
@@ -567,7 +621,7 @@ public class SALTSQL_Decompress {
      * no list, per-record mantissa string, or unselected BigDecimal is created.
      * Operation codes are 0=SUM, 1=AVG's sum, 2=MIN, and 3=MAX.
      */
-    public static WindowAggregateResult aggregateOneWindow01Stream(
+    private static WindowAggregateResult aggregateLegacyWindow(
             String bitStream01, int EXPONENT_BITS, int ULP_BITS,
             int fromInclusive, int toExclusive, int operation) throws IOException {
         if (fromInclusive < 0 || toExclusive < fromInclusive) {

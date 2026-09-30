@@ -19,7 +19,7 @@ public class SALTSQLCrudPersistenceTest {
                 new BigDecimal("2.25"), new BigDecimal("2.5")));
         String first = SALTSQL.encodeAsOneWindow01String(expected.subList(0, 2), 5, 2);
         String second = SALTSQL.encodeAsOneWindow01String(expected.subList(2, 4), 5, 2);
-        writeBits(base + ".bin", "011101010010" + first + second);
+        writeBits(base + ".bin", "00000001011101010010" + first + second);
         sidecar(base + "_window_len.bin", first.length(), second.length());
         sidecar(base + "_len_fenwick.bin", first.length(), first.length() + second.length());
         sidecar(base + "_window_num.bin", 2, 2);
@@ -38,6 +38,21 @@ public class SALTSQLCrudPersistenceTest {
         modify(base, "insertRecordByIndex", expected.size(), new BigDecimal("2.75"));
         expected.add(new BigDecimal("2.75"));
         verify(base, expected);
+        modify(base, "updateRecordByIndex", 0, new BigDecimal("1e-20"));
+        expected.set(0, new BigDecimal("1e-20"));
+        verify(base, expected);
+        modify(base, "insertRecordByIndex", 1, new BigDecimal("0.1234567890123456"));
+        expected.add(1, new BigDecimal("0.1234567890123456"));
+        verify(base, expected);
+        modify(base, "deleteRecordByIndex", 0, null);
+        expected.remove(0);
+        verify(base, expected);
+        File csv = new File(folder.getRoot(), "decoded.csv");
+        SALTSQL_Decompress.decompressBinStreamFile(new File(base + ".bin"), csv);
+        java.util.List<String> lines = java.nio.file.Files.readAllLines(csv.toPath());
+        assertEquals(expected.size(), lines.size());
+        for (int i = 0; i < expected.size(); i++)
+            assertEquals(0, expected.get(i).compareTo(new BigDecimal(lines.get(i))));
     }
 
     private void modify(String base, String name, long index, BigDecimal value) throws Exception {
@@ -63,10 +78,10 @@ public class SALTSQLCrudPersistenceTest {
 
     private void sidecar(String path, int a, int b) throws IOException {
         try (DataOutputStream out = new DataOutputStream(new FileOutputStream(path))) {
-            out.writeByte(32);
+            out.writeByte(16);
             out.writeInt(2);
-            out.writeInt(a);
-            out.writeInt(b);
+            out.writeShort(a);
+            out.writeShort(b);
         }
     }
 

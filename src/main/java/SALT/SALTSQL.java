@@ -1,5 +1,7 @@
 package SALT;
 
+import algorithms.SALTSQL.SALTSQLRawCodec;
+
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -22,7 +24,7 @@ public class SALTSQL {
     private static final int WIN_NUM_BITS_DEFAULT = WIN_BITS + 2;   // 每个 window 的长度编码位数
     private static final int NUM_FENWICK_BITS_DEFAULT = 32; // Fenwick 树节点值编码位数
     // 新增：每个 window 实际使用 bits 数量与其 Fenwick 树编码位数（可通过 main 的 args 覆盖）
-    private static final int WIN_LEN_BITS_DEFAULT = WIN_BITS + 6;   // 每个 window 的 bits 数量编码位数
+    private static final int WIN_LEN_BITS_DEFAULT = WIN_BITS + 7;   // 每个 window 的 bits 数量编码位数
     private static final int LEN_FENWICK_BITS_DEFAULT = 32;    // bits Fenwick 树节点值编码位数（long 建议 <= 64）
     private static final double LOG2_10 = Math.log(10.0) / Math.log(2.0);
 
@@ -219,84 +221,20 @@ public class SALTSQL {
     // 规则与 main 中 windowStart / delta 的编码保持一致
     public static String encodeAsOneWindow01String(List<BigDecimal> datas, int exponentBits, int ulpBits) {
         if (datas == null || datas.isEmpty()) return "";
-
-        StringBuilder out = new StringBuilder();
-
-        boolean hasFirst = false;
-        BigDecimal firstValue = BigDecimal.ZERO;
-
-        for (BigDecimal v0 : datas) {
-            if (v0 == null) continue;
-
-            BigDecimal value = v0.stripTrailingZeros();
-
-            // window start：第一个有效值
-            if (!hasFirst) {
-                hasFirst = true;
-
-                if (value.signum() == 0) {
-                    // 零位
-                    out.append('1');
-                    // 窗口首值为 0：编码仍写 1(零位)，但为后续 delta 基准将 firstValue 固定为 0.1
-                    firstValue = FIRST_VALUE_WHEN_WINDOW_START_IS_ZERO;
-                } else {
-                    firstValue = value;
-
-                    out.append('0'); // 非零位
-                    out.append(value.signum() < 0 ? '1' : '0'); // 符号位
-
-                    // windowStart: 4bit ulpPlaces + 11bit 指数原码 + mantissaBits
-                    out.append(String.format("%4s",
-                                    Integer.toBinaryString(Math.min(15, getUlpPlaces(value))))
-                            .replace(' ', '0'));
-                    out.append(toSignMagnitudeBinary(getIeeeExponent(value), 11));
-
-                    int manSave = getManSave(value);
-                    out.append(getDoubleMantissaBits(value.doubleValue(), manSave));
-                }
-                continue;
-            }
-
-            // window 内后续值：按 firstValue 做 delta
-            BigDecimal delta = subtractWithOriginalPrecision(value, firstValue).stripTrailingZeros();
-
-            if (delta.signum() == 0) {
-                out.append('1'); // 零位
-                continue;
-            }
-
-            out.append('0'); // 非零位
-            out.append(delta.signum() < 0 ? '1' : '0'); // 符号位
-
-            int ulp = getUlpPlaces(delta);
-            int deltaUlp = ulp - getUlpPlaces(firstValue);
-            int exponent = getIeeeExponent(delta);
-
-            // ULP 差值：能放进 ulpBits 就写 ulpBits；否则先写 ulpBits，再补 4bit 的 ulpPlaces(delta)
-            if (Math.abs(deltaUlp) < (1 << (ulpBits - 1))) {
-                out.append(toSignMagnitudeBinary(deltaUlp, ulpBits));
-            } else {
-                out.append(toSignMagnitudeBinary(deltaUlp, ulpBits));
-                out.append(String.format("%4s",
-                                Integer.toBinaryString(Math.min(15, getUlpPlaces(delta))))
-                        .replace(' ', '0'));
-            }
-
-            // 指数：能放进 exponentBits → 前缀 0 + exponentBits；否则前缀 1 + 11bit
-            if (Math.abs(exponent) < (1 << (exponentBits - 1))) {
-                out.append('0');
-                out.append(toSignMagnitudeBinary(exponent, exponentBits));
-            } else {
-                out.append('1');
-                out.append(toSignMagnitudeBinary(exponent, 11));
-            }
-
-            int manSave = getManSave(delta);
-            out.append(getDoubleMantissaBits(delta.doubleValue(), manSave));
+        StringBuilder bits = new StringBuilder();
+        BigDecimal reference = null;
+        boolean first = true;
+        for (BigDecimal value : datas) {
+            if (value == null) continue;
+            double v = value.doubleValue();
+            if (!Double.isFinite(v)) throw new IllegalArgumentException("SALT+ BigDecimal API requires finite binary64 values");
+            bits.append(SALTSQLRawCodec.encode(v, reference, first, exponentBits, ulpBits));
+            if (first) reference = SALTSQLRawCodec.reference(v);
+            first = false;
         }
-
-        return out.toString();
+        return bits.toString();
     }
+
 
     public static final class BitOutputStream implements Closeable {
         private final OutputStream out;
@@ -480,7 +418,7 @@ public class SALTSQL {
                 try (PrintWriter txtOut = new PrintWriter(new OutputStreamWriter(
                         new FileOutputStream(txtFileName), StandardCharsets.UTF_8))) {
 
-                    String meta = toFixedBinary(WIN_BITS, 4)
+                    String meta = "0000" + toFixedBinary(SALTSQLRawCodec.VERSION, 4) + toFixedBinary(WIN_BITS, 4)
                             + toFixedBinary(EXPONENT_BITS, 4)
                             + toFixedBinary(ULP_BITS, 4);
                     txtOut.println(meta);  // txt 第一行就是参数信息
@@ -517,60 +455,10 @@ public class SALTSQL {
                         int wIdx = windowLens.size() - 1;
                         windowLens.set(wIdx, windowLens.get(wIdx) + 1);
 
-                        if(isWindowStart){
-                            if(value.signum() == 0){
-                                str="1"; // 零位
-                                // 窗口首值为 0：为后续 delta 基准将 firstValue 固定为 0.1
-                                firstValue = FIRST_VALUE_WHEN_WINDOW_START_IS_ZERO;
-                            }else{
-                                firstValue = value;
-                                str+='0'; // 非零位
-                                if(value.signum() < 0){
-                                    str+='1';
-                                }else{
-                                    str+='0';
-                                }
-                                int ulp=getUlpPlaces(value);
-                                int exponent=getIeeeExponent(value);
-                                str+=String.format("%4s",Integer.toBinaryString(Math.min(15, getUlpPlaces(value)))).replace(' ', '0');
-                                str+=toSignMagnitudeBinary(exponent, 11);
-                                int manSave=getManSave(value);
-                                str+=getDoubleMantissaBits(value.doubleValue(),manSave);
-                            }
-                        }else{
-                            BigDecimal delta = subtractWithOriginalPrecision(value, firstValue);
-                            delta = delta.stripTrailingZeros();
-                            if(delta.signum() == 0){
-                                str="1"; // 零位
-                            }else{
-                                str+='0'; // 非零位
-                                if(delta.signum() < 0){
-                                    str+='1';
-                                }else{
-                                    str+='0';
-                                }
-                                int ulp=getUlpPlaces(delta);
-                                int deltaUlp = ulp - getUlpPlaces(firstValue);
-                                int exponent=getIeeeExponent(delta);
-                                if(Math.abs(deltaUlp)<(1<<(ULP_BITS-1))){
-                                    str+=toSignMagnitudeBinary(deltaUlp, ULP_BITS);
-                                }else {
-                                    str += toSignMagnitudeBinary(deltaUlp, ULP_BITS);
-                                    str += String.format("%4s", Integer.toBinaryString(Math.min(15, getUlpPlaces(delta)))).replace(' ', '0');
-                                }
-                                if(Math.abs(exponent)<(1<<(EXPONENT_BITS-1))){
-                                    str+='0';
-                                    str+=toSignMagnitudeBinary(exponent, EXPONENT_BITS);
-                                }else{
-                                    str+='1';
-                                    str+=toSignMagnitudeBinary(exponent, 11);
-                                }
-
-                                int manSave=getManSave(delta);
-                                str+=getDoubleMantissaBits(delta.doubleValue(),manSave);
-
-                            }
-                        }
+                        double inputValue = value.doubleValue();
+                        if (!Double.isFinite(inputValue)) throw new IllegalArgumentException("Non-finite CSV value");
+                        str = SALTSQLRawCodec.encode(inputValue, firstValue, isWindowStart, EXPONENT_BITS, ULP_BITS);
+                        if (isWindowStart) firstValue = SALTSQLRawCodec.reference(inputValue);
 
                         if(blockCount % winSize == winSize - 1 || idx == datas.length - 1){
                             sumBits = sumBits + WIN_NUM_BITS_DEFAULT;
@@ -610,7 +498,7 @@ public class SALTSQL {
                 try (BitOutputStream bitOut = new BitOutputStream(
                         new BufferedOutputStream(new FileOutputStream(bitFileName)))) {
 
-                    String meta = toFixedBinary(WIN_BITS, 4)
+                    String meta = "0000" + toFixedBinary(SALTSQLRawCodec.VERSION, 4) + toFixedBinary(WIN_BITS, 4)
                             + toFixedBinary(EXPONENT_BITS, 4)
                             + toFixedBinary(ULP_BITS, 4);
                     bitOut.writeBitString(meta);  // txt 第一行就是参数信息
@@ -647,60 +535,10 @@ public class SALTSQL {
                         int wIdx = windowLens.size() - 1;
                         windowLens.set(wIdx, windowLens.get(wIdx) + 1);
 
-                        if(isWindowStart){
-                            if(value.signum() == 0){
-                                str="1"; // 零位
-                                // 窗口首值为 0：为后续 delta 基准将 firstValue 固定为 0.1
-                                firstValue = FIRST_VALUE_WHEN_WINDOW_START_IS_ZERO;
-                            }else{
-                                firstValue = value;
-                                str+='0'; // 非零位
-                                if(value.signum() < 0){
-                                    str+='1';
-                                }else{
-                                    str+='0';
-                                }
-                                int ulp=getUlpPlaces(value);
-                                int exponent=getIeeeExponent(value);
-                                str+=String.format("%4s",Integer.toBinaryString(Math.min(15, getUlpPlaces(value)))).replace(' ', '0');
-                                str+=toSignMagnitudeBinary(exponent, 11);
-                                int manSave=getManSave(value);
-                                str+=getDoubleMantissaBits(value.doubleValue(),manSave);
-                            }
-                        }else{
-                            BigDecimal delta = subtractWithOriginalPrecision(value, firstValue);
-                            delta = delta.stripTrailingZeros();
-                            if(delta.signum() == 0){
-                                str="1"; // 零位
-                            }else{
-                                str+='0'; // 非零位
-                                if(delta.signum() < 0){
-                                    str+='1';
-                                }else{
-                                    str+='0';
-                                }
-                                int ulp=getUlpPlaces(delta);
-                                int deltaUlp = ulp - getUlpPlaces(firstValue);
-                                int exponent=getIeeeExponent(delta);
-                                if(Math.abs(deltaUlp)<(1<<(ULP_BITS-1))){
-                                    str+=toSignMagnitudeBinary(deltaUlp, ULP_BITS);
-                                }else {
-                                    str += toSignMagnitudeBinary(deltaUlp, ULP_BITS);
-                                    str += String.format("%4s", Integer.toBinaryString(Math.min(15, getUlpPlaces(delta)))).replace(' ', '0');
-                                }
-                                if(Math.abs(exponent)<(1<<(EXPONENT_BITS-1))){
-                                    str+='0';
-                                    str+=toSignMagnitudeBinary(exponent, EXPONENT_BITS);
-                                }else{
-                                    str+='1';
-                                    str+=toSignMagnitudeBinary(exponent, 11);
-                                }
-
-                                int manSave=getManSave(delta);
-                                str+=getDoubleMantissaBits(delta.doubleValue(),manSave);
-
-                            }
-                        }
+                        double inputValue = value.doubleValue();
+                        if (!Double.isFinite(inputValue)) throw new IllegalArgumentException("Non-finite CSV value");
+                        str = SALTSQLRawCodec.encode(inputValue, firstValue, isWindowStart, EXPONENT_BITS, ULP_BITS);
+                        if (isWindowStart) firstValue = SALTSQLRawCodec.reference(inputValue);
 
                         if(blockCount % winSize == winSize - 1 || idx == datas.length - 1){
 

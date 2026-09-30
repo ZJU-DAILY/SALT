@@ -1,6 +1,9 @@
 package algorithms.SALTSQL.decoder;
 
 import algorithms.Decoder;
+import algorithms.SALTSQL.SALTSQLRawCodec;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import algorithms.SALTSQL.SALTSQLUtils;
 
 import java.math.BigDecimal;
@@ -8,6 +11,7 @@ import java.math.BigDecimal;
 /** Decoder matching DoubleSALTSQLLEncoder. */
 public class DoubleSALTSQLDecoder extends Decoder {
     private boolean headerRead = false;
+    private boolean rawFormat;
     private int WIN_BITS;
     private int EXPONENT_BITS;
     private int ULP_BITS;
@@ -27,6 +31,14 @@ public class DoubleSALTSQLDecoder extends Decoder {
         }
 
         boolean isWindowStart = (blockCount % winSize == 0);
+        if (rawFormat) {
+            try {
+                double value = SALTSQLRawCodec.decode(in::readLong, firstValue, isWindowStart, EXPONENT_BITS, ULP_BITS);
+                if (isWindowStart) firstValue = SALTSQLRawCodec.reference(value);
+                blockCount++;
+                return value;
+            } catch (IOException e) { throw new UncheckedIOException(e); }
+        }
         BigDecimal value = isWindowStart ? readWindowStart() : readDeltaValue();
         blockCount++;
         return value.doubleValue();
@@ -34,6 +46,12 @@ public class DoubleSALTSQLDecoder extends Decoder {
 
     private void readHeader() {
         WIN_BITS = in.readInt(4);
+        if (WIN_BITS == 0) {
+            int version = in.readInt(4);
+            if (version != SALTSQLRawCodec.VERSION) throw new IllegalArgumentException("Unsupported SALT+ version: " + version);
+            rawFormat = true;
+            WIN_BITS = in.readInt(4);
+        }
         EXPONENT_BITS = in.readInt(4);
         ULP_BITS = in.readInt(4);
         winSize = 1 << WIN_BITS;

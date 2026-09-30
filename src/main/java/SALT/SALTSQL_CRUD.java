@@ -1,5 +1,7 @@
 package SALT;
 
+import algorithms.SALTSQL.SALTSQLRawCodec;
+
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -14,7 +16,7 @@ import static SALT.SALTSQL_Decompress.decompressOneWindow01Stream;
 import static SALT.SALTSQL_Decompress.aggregateOneWindow01Stream;
 /**
  * Packed-bits ONLY version:
- * - Main data: <base>.bin (bits packed MSB-first), starts with a 12-bit header (WIN + EXP + ULP), then window bits.
+ * - Main data: <base>.bin (bits packed MSB-first), starts with a versioned 20-bit header (legacy: 12 bits), then window bits.
  * - Sidecars: <base>_window_len.bin / <base>_len_fenwick.bin / <base>_window_num.bin / <base>_num_fenwick.bin
  *   All are packed MSB-first, start with 5-byte meta (width + count), then values stream.
  *
@@ -42,7 +44,8 @@ public final class SALTSQL_CRUD implements Closeable {
     // ---- main packed-bits file ----
     private final RandomAccessFile rafBin;
     private final int winBitsFromFile; // from main .bin 12-bit header (WIN_BITS)
-    private static final long DATA_START_BIT_OFFSET = 12L; // main .bin has 12-bit metadata header; skip it
+    private final long DATA_START_BIT_OFFSET;
+    private final boolean rawFormat; // New files use 20 bits; legacy files use 12.
 
     private final int exponentBitsFromFile; // EXPONENT_BITS (4 bits)
     private final int ulpBitsFromFile;      // ULP_BITS (4 bits)
@@ -69,7 +72,13 @@ public final class SALTSQL_CRUD implements Closeable {
             int expBits = (b0 & 0x0F);
             int ulpBits = ((b1 & 0xFF) >>> 4) & 0x0F;
 
-            return new int[]{winBits, expBits, ulpBits};
+            if (winBits == 0) {
+                if (expBits != SALTSQLRawCodec.VERSION) throw new IOException("Unsupported SALT+ version");
+                int b2 = raf.read();
+                if (b2 < 0) throw new EOFException("Truncated SALT+ header");
+                return new int[]{ulpBits, b1 & 0x0F, (b2 >>> 4) & 0x0F, SALTSQLRawCodec.HEADER_BITS};
+            }
+            return new int[]{winBits, expBits, ulpBits, 12};
         } finally {
             raf.seek(oldPos);
         }
@@ -118,6 +127,8 @@ public final class SALTSQL_CRUD implements Closeable {
             // 读主文件前 12 bit meta：WIN(4) + EXP(4) + ULP(4)
             int[] meta = readMainMeta12(tmpBin);
             // WIN_BITS 不用读取/不使用：meta[0] 丢弃
+            this.DATA_START_BIT_OFFSET = meta[3];
+            this.rawFormat = meta[3] == SALTSQLRawCodec.HEADER_BITS;
             this.winBitsFromFile = meta[0];
             this.exponentBitsFromFile = meta[1];
             this.ulpBitsFromFile = meta[2];
@@ -646,7 +657,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
             String bits = readWindow01(windowNo);
             List<BigDecimal> values = decompressOneWindow01Stream(
-                    bits, exponentBitsFromFile, ulpBitsFromFile);
+                    bits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
             if (values.size() != windowNum[windowNo]) {
                 throw new IOException("Decompressed size mismatch: windowNo=" + windowNo
                         + ", values.size=" + values.size()
@@ -703,7 +714,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
             String bits = readWindow01(windowNo);
             List<BigDecimal> values = decompressOneWindow01Stream(
-                    bits, exponentBitsFromFile, ulpBitsFromFile);
+                    bits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
             if (values.size() != windowNum[windowNo]) {
                 throw new IOException("Decompressed size mismatch: windowNo=" + windowNo
                         + ", values.size=" + values.size()
@@ -762,7 +773,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
             String bits = readWindow01(windowNo);
             List<BigDecimal> values = decompressOneWindow01Stream(
-                    bits, exponentBitsFromFile, ulpBitsFromFile);
+                    bits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
             if (values.size() != windowNum[windowNo]) {
                 throw new IOException("Decompressed size mismatch: windowNo=" + windowNo
                         + ", values.size=" + values.size()
@@ -842,7 +853,7 @@ public final class SALTSQL_CRUD implements Closeable {
             String bits = readWindow01(windowNo);
             SALTSQL_Decompress.WindowAggregateResult windowResult =
                     aggregateOneWindow01Stream(bits, exponentBitsFromFile, ulpBitsFromFile,
-                            inWindowIndex, inWindowIndex + take, operation);
+                            inWindowIndex, inWindowIndex + take, operation, rawFormat);
             if (windowResult.decodedCount != windowRecords) {
                 throw new IOException("Decompressed size mismatch: windowNo=" + windowNo
                         + ", decodedCount=" + windowResult.decodedCount
@@ -895,7 +906,7 @@ public final class SALTSQL_CRUD implements Closeable {
         List<BigDecimal> values = decompressOneWindow01Stream(
                 oldBits,
                 exponentBitsFromFile,
-                ulpBitsFromFile
+                ulpBitsFromFile, rawFormat
         );
 
         if (inWindowIndex < 0 || inWindowIndex >= values.size()) {
@@ -966,7 +977,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
         // ---- 2) decode, remove, re-encode ----
         String oldBits = readWindow01(windowNo);
-        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile);
+        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
 
         if (inWindowIndex < 0 || inWindowIndex >= values.size()) {
             throw new IOException("Decompressed size mismatch: windowNo=" + windowNo +
@@ -982,10 +993,12 @@ public final class SALTSQL_CRUD implements Closeable {
             throw new IllegalStateException("Window becomes empty after delete. windowNo=" + windowNo);
         }
 
+        requireRawFormatForModification();
         String newBits = encodeAsOneWindow01String(values, exponentBitsFromFile, ulpBitsFromFile);
         long newLenBits = newBits.length();
         long newNum = values.size();
 
+        validateWindowUpdate(windowNo, newLenBits, newNum);
         rewriteMainBinReplacingOneWindow(windowNo, newBits);
         updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
@@ -996,14 +1009,33 @@ public final class SALTSQL_CRUD implements Closeable {
 
     /**
      * Rewrites the main .bin as:
-     *   [12-bit header] + window0Bits + window1Bits + ... + window(n-1)Bits
+     *   [versioned header] + window0Bits + window1Bits + ... + window(n-1)Bits
      */
+    private void validateWindowUpdate(int windowNo, long newLen, long newNum) throws IOException {
+        ensureFitsWidth(lenMeta.width, newLen, "window bit length");
+        ensureFitsWidth(numMeta.width, newNum, "window count");
+        for (int i = windowNo + 1; i <= lenFenMeta.count; i += i & -i) {
+            ensureFitsWidth(lenFenMeta.width, readSidecarValueAt(rafLenFen, lenFenMeta, i)
+                    + newLen - windowLenBits[windowNo], "length Fenwick node");
+            ensureFitsWidth(numFenMeta.width, readSidecarValueAt(rafNumFen, numFenMeta, i)
+                    + newNum - windowNum[windowNo], "count Fenwick node");
+        }
+    }
+
+    private void requireRawFormatForModification() throws IOException {
+        if (!rawFormat) throw new IOException("Re-encode legacy SALT+ files before modifying them with the RAW format");
+    }
+
     private void rewriteMainBinReplacingOneWindow(int targetWindowNo, String newBits01) throws IOException {
         File tmp = File.createTempFile("our_sql_bin_rewrite_", ".tmp");
         try (RandomAccessFile out = new RandomAccessFile(tmp, "rw")) {
             BitFileWriter bw = new BitFileWriter(out);
 
             // 12-bit header: WIN(4) + EXP(4) + ULP(4)
+            if (rawFormat) {
+                bw.writeFixedBits(0, 4);
+                bw.writeFixedBits(SALTSQLRawCodec.VERSION, 4);
+            }
             bw.writeFixedBits(winBitsFromFile & 0x0F, 4);
             bw.writeFixedBits(exponentBitsFromFile & 0x0F, 4);
             bw.writeFixedBits(ulpBitsFromFile & 0x0F, 4);
@@ -1107,7 +1139,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
         // ---- 2) decode, replace, re-encode ----
         String oldBits = readWindow01(windowNo);
-        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile);
+        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
 
         if (inWindowIndex < 0 || inWindowIndex >= values.size()) {
             throw new IOException("Decompressed size mismatch: windowNo=" + windowNo +
@@ -1118,10 +1150,12 @@ public final class SALTSQL_CRUD implements Closeable {
 
         BigDecimal oldValue = values.set(inWindowIndex, newValue);
 
+        requireRawFormatForModification();
         String newBits = encodeAsOneWindow01String(values, exponentBitsFromFile, ulpBitsFromFile);
         long newLenBits = newBits.length();
         long newNum = values.size(); // should equal oldNum
 
+        validateWindowUpdate(windowNo, newLenBits, newNum);
         rewriteMainBinReplacingOneWindow(windowNo, newBits);
         updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
@@ -1179,7 +1213,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
         // ---- 2) decode, insert, re-encode ----
         String oldBits = readWindow01(windowNo);
-        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile);
+        List<BigDecimal> values = decompressOneWindow01Stream(oldBits, exponentBitsFromFile, ulpBitsFromFile, rawFormat);
 
         if (inWindowIndex < 0 || inWindowIndex > values.size()) {
             throw new IOException("Insert index mismatch: windowNo=" + windowNo +
@@ -1189,10 +1223,12 @@ public final class SALTSQL_CRUD implements Closeable {
 
         values.add(inWindowIndex, value);
 
+        requireRawFormatForModification();
         String newBits = encodeAsOneWindow01String(values, exponentBitsFromFile, ulpBitsFromFile);
         long newLenBits = newBits.length();
         long newNum = values.size();
 
+        validateWindowUpdate(windowNo, newLenBits, newNum);
         rewriteMainBinReplacingOneWindow(windowNo, newBits);
         updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
