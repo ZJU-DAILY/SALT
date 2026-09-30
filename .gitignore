@@ -51,7 +51,6 @@ desktop.ini
 # Local archive of removed files and pre-cleanup backups
 /datasets/*
 !/datasets/.gitkeep
-!/datasets/Overall/
 /results/
 /abortion/
 /ALP/

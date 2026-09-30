@@ -8,8 +8,8 @@ update operations.
 ## Repository layout
 
 Codec sources and experiment drivers are under `src`, with Kangaroo's core
-implementation under `kangaroo-java`. Only the `Overall` dataset collection is
-included under `datasets`. Results and the local `abortion` archive are excluded from Git.
+implementation under `kangaroo-java`. Dataset files, results, and the local
+`abortion` archive are excluded from Git.
 
 ## Requirements
 
@@ -283,9 +283,11 @@ Python plotting utilities are located in `src/main/python`.
 
 ## Data and generated files
 
-Only `datasets/Overall/` and the placeholder `datasets/.gitkeep` are tracked.
-Other dataset directories and experiment results are excluded from Git,
-along with encoded streams, temporary files, IDE metadata, and local paper drafts.
+Dataset files are not distributed with this repository; only the placeholder
+`datasets/.gitkeep` is tracked. Obtain datasets from the original sources cited
+in the paper and prepare local CSV inputs under `datasets/Overall/` to use the
+example commands above. Dataset files and experiment results are excluded from
+Git, along with encoded streams, temporary files, IDE metadata, and local paper drafts.
 
 ## Baseline implementation sources
 
