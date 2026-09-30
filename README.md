@@ -329,4 +329,5 @@ plus originals of edited files under `before-cleanup/`. It is excluded from Git.
 The move list and restoration instructions are in `abortion/README.md`.
 Only the timing `main` was removed from `SALTSQL_CRUD`; its query, modification,
 rewrite, and index-update methods were retained without changing their behavior.
-This cleanup does not complete missing persistence calls in the modification paths.
+The modification paths now call the retained rewrite and index-update methods after
+re-encoding; their returned timings include both steps.

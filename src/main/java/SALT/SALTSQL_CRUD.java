@@ -936,7 +936,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
     /**
      * Measures window lookup, decoding, deletion, and re-encoding.
-     * Does not write the modified window or update indexes.
+     * Writes the modified window and updates its indexes.
      * @return elapsed time in milliseconds
      */
     private BigDecimal deleteRecordByIndex(long recordIndex) throws IOException {
@@ -986,7 +986,8 @@ public final class SALTSQL_CRUD implements Closeable {
         long newLenBits = newBits.length();
         long newNum = values.size();
 
-        long midTime = System.nanoTime();
+        rewriteMainBinReplacingOneWindow(windowNo, newBits);
+        updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
         long endTime = System.nanoTime();
 
@@ -1075,7 +1076,7 @@ public final class SALTSQL_CRUD implements Closeable {
 
     /**
      * Measures window lookup, decoding, replacement, and re-encoding.
-     * Does not write the modified window or update indexes.
+     * Writes the modified window and updates its indexes.
      * @return elapsed time in milliseconds
      */
     private BigDecimal updateRecordByIndex(long recordIndex, BigDecimal newValue) throws IOException {
@@ -1121,16 +1122,17 @@ public final class SALTSQL_CRUD implements Closeable {
         long newLenBits = newBits.length();
         long newNum = values.size(); // should equal oldNum
 
-        long midTime= System.nanoTime();
+        rewriteMainBinReplacingOneWindow(windowNo, newBits);
+        updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
         long endTime = System.nanoTime();
 
-        return BigDecimal.valueOf((midTime - startTime)/1_000_000.0);
+        return BigDecimal.valueOf((endTime - startTime)/1_000_000.0);
     }
 
     /**
      * Measures window lookup, decoding, insertion, and re-encoding.
-     * Does not write the modified window or update indexes.
+     * Writes the modified window and updates its indexes.
      * @return elapsed time in milliseconds
      */
     private BigDecimal insertRecordByIndex(long recordIndex, BigDecimal value) throws IOException {
@@ -1191,9 +1193,11 @@ public final class SALTSQL_CRUD implements Closeable {
         long newLenBits = newBits.length();
         long newNum = values.size();
 
-        long midTime= System.nanoTime();
+        rewriteMainBinReplacingOneWindow(windowNo, newBits);
+        updateWindowLenAndNum(windowNo, newLenBits, newNum);
 
-        return BigDecimal.valueOf((midTime - startTime)/1_000_000.0);
+        long endTime = System.nanoTime();
+        return BigDecimal.valueOf((endTime - startTime)/1_000_000.0);
     }
 
 }
