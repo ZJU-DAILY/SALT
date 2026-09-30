@@ -287,6 +287,29 @@ Only `datasets/Overall/` and the placeholder `datasets/.gitkeep` are tracked.
 Other dataset directories and experiment results are excluded from Git,
 along with encoded streams, temporary files, IDE metadata, and local paper drafts.
 
+## Baseline implementation sources
+
+The table records the Java implementations used in this repository. For methods
+integrated through DeXOR, the links identify the implementation source rather
+than implying that we obtained code directly from each method's original authors.
+
+| Baseline | Implementation source | Local source |
+|---|---|---|
+| ALP | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/ALP); distinct from the native C++ ALP implementation. | [`ALP`](src/main/java/algorithms/ALP) |
+| Chimp | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/Chimp). | [`Chimp`](src/main/java/algorithms/Chimp) |
+| Chimp128 | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/Chimp128). | [`Chimp128`](src/main/java/algorithms/Chimp128) |
+| Gorilla | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/Gorilla). | [`Gorilla`](src/main/java/algorithms/Gorilla) |
+| Elf | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/Elf). | [`Elf`](src/main/java/algorithms/Elf) |
+| ElfPlus | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/ElfPlus). | [`ElfPlus`](src/main/java/algorithms/ElfPlus) |
+| Camel | Java implementation from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/Camel); the source also credits [yoyo185644/camel](https://github.com/yoyo185644/camel). | [`Camel`](src/main/java/algorithms/Camel) |
+| DeXOR | Java implementation from the [DeXOR repository](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms/DeXOR). | [`DeXOR`](src/main/java/algorithms/DeXOR) |
+| Kangaroo | Independent Java reimplementation following the paper, with Fast and Compact modes; not the authors' implementation and not compatible with their wire format. | [`Core`](kangaroo-java/src/main/java/compression/kangaroo), [`benchmark adapters`](src/main/java/algorithms/Kangaroo) |
+| ElfStar / SElfStar | Additional Java implementations from [DeXOR](https://github.com/SuDIS-ZJU/DeXOR/tree/master/src/main/java/algorithms); their source credits [Spatio-Temporal-Lab/SElfStar](https://github.com/Spatio-Temporal-Lab/SElfStar). | [`ElfStar`](src/main/java/algorithms/ElfStar), [`SElfStar`](src/main/java/algorithms/SElfStar) |
+
+ElfStar and SElfStar are retained in the codebase in addition to the nine paper
+baselines. All implementations use the local benchmark interfaces; these source
+attributions do not imply identical experiment settings or results to upstream.
+
 ## Third-party software
 
 The native ALP tree is archived locally under `abortion/upload-layout-20260921/ALP`.
