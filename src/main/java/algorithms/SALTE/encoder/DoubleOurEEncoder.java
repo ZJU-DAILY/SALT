@@ -13,7 +13,7 @@ public class DoubleOurEEncoder extends Encoder {
     // ====== Meta (same meaning as your Our_With_Encode) ======
     private static final int WIN_BITS = 2;
     private static final int EXPONENT_BITS = 3;
-    private static final int ULP_BITS = 2;
+    private static final int ULP_BITS = 3;
 
     // 0 => auto (same as your CODE_BITS=0)
     private static final int CODE_BITS = 0;

@@ -18,8 +18,8 @@ public class SALTSQL {
     private static final int ZERO_BITS = 1;      // 是否为零位
     private static final int SIGN_BITS = 1;      // 符号位
     private static final int WIN_BITS = 7;       // 窗口大小编码位数，默认为7
-    private static final int EXPONENT_BITS = 5;  // 指数变化编码位数
-    private static final int ULP_BITS = 2;       // 精度变化编码位数
+    private static final int EXPONENT_BITS = 3;  // 指数变化编码位数
+    private static final int ULP_BITS = 3;       // 精度变化编码位数
     // 新增：窗口长度与 Fenwick 树编码位数（可通过 main 的 args 覆盖）
     private static final int WIN_NUM_BITS_DEFAULT = WIN_BITS + 2;   // 每个 window 的长度编码位数
     private static final int NUM_FENWICK_BITS_DEFAULT = 32; // Fenwick 树节点值编码位数

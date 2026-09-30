@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 /** Versioned SALT+ encoder with a fixed ZERO/ESC/RAW codebook. */
 public class DoubleSALTSQLEncoder extends Encoder {
-    private static final int WIN_BITS = 7, EXPONENT_BITS = 5, ULP_BITS = 2;
+    private static final int WIN_BITS = 7, EXPONENT_BITS = 3, ULP_BITS = 3;
     private int count;
     private long rawCount;
     private BigDecimal reference;

@@ -122,7 +122,7 @@ The codebook segments are embedded at the periodic boundaries determined by
 |---|---:|---:|---|
 | `WIN_BITS` | 4 | 2 | Width of a reference index; the sliding window contains $2^{WIN\_BITS}=4$ candidates. |
 | `EXPONENT_BITS` | 4 | 3 | Width of a normal exponent transition. |
-| `ULP_BITS` | 4 | 2 | Width of a normal decimal-precision transition. |
+| `ULP_BITS` | 4 | 3 | Width of a normal decimal-precision transition. |
 | `BLOCK_SIZE` | 20 | 10,000 | Codebook refresh period. |
 
 The SALT header is therefore exactly **32 bits (4 bytes)**. The benchmark
@@ -194,7 +194,7 @@ Despite their historical names, `window_num` stores record counts and
 
 New SALT+ files use a **20-bit versioned header**:
 `marker=0:4 | version=1:4 | WIN_BITS:4 | EXPONENT_BITS:4 | ULP_BITS:4`.
-The default parameter values are 7, 5, and 2, giving 128 records per initial
+The default parameter values are 7, 3, and 3, giving 128 records per initial
 window. Windows are concatenated without byte alignment, starting at bit 20.
 Legacy files with a nonzero first nibble retain their 12-bit header and can
 still be read. Re-encode legacy files before CRUD modification; formats cannot
