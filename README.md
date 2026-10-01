@@ -281,64 +281,34 @@ records and 16,383 compressed bits, while each 32-bit Fenwick node can store at
 most $2^{32}-1$. A CRUD operation fails rather than silently overflowing when
 an updated value exceeds one of these fixed-width fields.
 
-## Experiment drivers
+## Dataset sources
 
-The following Java entry points implement the main paper experiments:
-
-- `Experiment.CodebookDistributionExperiment`
-- `org.example.Precision`
-- `org.example.Preprocess`
-- `org.example.Proportion`
-- `org.example.ShuffleDataset`
-
-Python plotting utilities are located in `src/main/python`.
-
-## Data and generated files
-
-Dataset files are not distributed with this repository; only the placeholder
-`datasets/.gitkeep` is tracked. Obtain datasets from the original sources cited
-in the paper and prepare local CSV inputs under `datasets/Overall/` to use the
-example commands above. Dataset files and experiment results are excluded from
-Git, along with encoded streams, temporary files, IDE metadata, and local paper drafts.
-
-### Dataset sources
-
-The following mapping follows Table 1 and the references of the SALT paper.
-Dataset names and abbreviations are those used in the paper; reference numbers
-refer to that manuscript. Links identify the cited source, not necessarily a
-ready-to-run copy of the experimental subset.
-
-| Abbreviation | Dataset | Source cited in the paper | Paper reference |
-|---|---|---|---|
-| KPI | KPI_18fb | Ren et al., [Time-Series Anomaly Detection Service at Microsoft](https://arxiv.org/abs/1906.03821), KDD 2019 (paper). | [46] |
-| CT | City-temp | [Daily Temperature of Major Cities](https://www.kaggle.com/datasets/sudalairajkumar/daily-temperature-of-major-cities), Kaggle. | [4] |
-| WS | Wind-Speed | [2D Wind Speed and Direction](https://data.neonscience.org/data-products/DP1.00001.001/RELEASE-2022), NEON, release 2022. | [8] |
-| IR | IR-bio-temp | [IR Biological Temperature](https://data.neonscience.org/data-products/DP1.00005.001/RELEASE-2022), NEON, release 2022. | [13] |
-| PM | PM10-dust | [Dust and Particulate Size Distribution](https://data.neonscience.org/data-products/DP1.00017.001/RELEASE-2022), NEON, release 2022. | [11] |
-| DPT | Dew-point-temp | [Relative Humidity Above Water On-Buoy](https://data.neonscience.org/data-products/DP1.20271.001/RELEASE2022), NEON, as cited in the paper. | [14] |
-| CA | California | [Historical EMS Hourly Load](https://www.caiso.com/library/historical-ems-hourly-load), California ISO; cited as OASIS: System Demand. | [26] |
-| HRL | hrl_load_metered | [Hourly Load: Metered](https://dataminer2.pjm.com/feed/hrl_load_metered), PJM Data Miner. | [21] |
-| SUK | Stocks-UK | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. | [5] |
-| SUSA | Stocks-USA | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. | [5] |
-| SDE | Stocks-DE | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. | [5] |
-| BP | Bitcoin-price | [InfluxDB 2.0 Sample Data](https://github.com/influxdata/influxdb2-sample-data). | [17] |
-| AP | Air-pressure | [Barometric Pressure](https://data.neonscience.org/data-products/DP1.00004.001/RELEASE-2022), NEON, release 2022. | [9] |
-| BM | Bird-migration | [InfluxDB 2.0 Sample Data](https://github.com/influxdata/influxdb2-sample-data). | [17] |
-| BW | Basel-wind | [Historical Weather Data for Basel](https://www.meteoblue.com/en/weather/archive/export/basel_switzerland), meteoblue. | [16] |
-| ER | exchange | Lai et al., [Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks](https://doi.org/10.1145/3209978.3210006), SIGIR 2018 (paper). | [35] |
-| BT | Basel-temp | [Historical Weather Data for Basel](https://www.meteoblue.com/en/weather/archive/export/basel_switzerland), meteoblue. | [16] |
-| WF | waveform_float | [FDSN Dataselect Web Service](https://service.iris.edu/fdsnws/dataselect/1/), IRIS. | [20] |
-| EVC | Vehicle_charging | [Electric Vehicle Charging Dataset](https://www.kaggle.com/datasets/michaelbryantds/electric-vehicle-charging-dataset), Kaggle. | [12] |
-| BL | Blockchain-tr | [Bitcoin Transactions](https://gz.blockchair.com/bitcoin/transactions), Blockchair. | [10] |
-| FP | Food-price | [Global Food Prices Database (WFP)](https://data.humdata.org/dataset/wfp-food-prices), Humanitarian Data Exchange. | [6] |
-| SSD | SSD-bench | [SSD and HDD Benchmarks](https://www.kaggle.com/datasets/alanjo/ssd-and-hdd-benchmarks), Kaggle. | [15] |
-| CLA | City-lat | [World Cities of Different Countries](https://www.kaggle.com/datasets/kuntalmaity/world-city), Kaggle. | [7] |
-| CLO | City-lon | [World Cities of Different Countries](https://www.kaggle.com/datasets/kuntalmaity/world-city), Kaggle. | [7] |
-
-For KPI and ER, the manuscript cites research papers rather than direct dataset
-download URLs; the links above lead to those papers.
-The source citations alone do not specify all column selections, date ranges,
-or preprocessing steps needed to reconstruct the exact experimental inputs.
+| Abbreviation | Dataset | Source cited in the paper |
+|---|---|---|
+| KPI | KPI_18fb | Ren et al., [Time-Series Anomaly Detection Service at Microsoft](https://arxiv.org/abs/1906.03821), KDD 2019 (paper). |
+| CT | City-temp | [Daily Temperature of Major Cities](https://www.kaggle.com/datasets/sudalairajkumar/daily-temperature-of-major-cities), Kaggle. |
+| WS | Wind-Speed | [2D Wind Speed and Direction](https://data.neonscience.org/data-products/DP1.00001.001/RELEASE-2022), NEON, release 2022. |
+| IR | IR-bio-temp | [IR Biological Temperature](https://data.neonscience.org/data-products/DP1.00005.001/RELEASE-2022), NEON, release 2022. |
+| PM | PM10-dust | [Dust and Particulate Size Distribution](https://data.neonscience.org/data-products/DP1.00017.001/RELEASE-2022), NEON, release 2022. |
+| DPT | Dew-point-temp | [Relative Humidity Above Water On-Buoy](https://data.neonscience.org/data-products/DP1.20271.001/RELEASE2022), NEON, as cited in the paper. |
+| CA | California | [Historical EMS Hourly Load](https://www.caiso.com/library/historical-ems-hourly-load), California ISO; cited as OASIS: System Demand. |
+| HRL | hrl_load_metered | [Hourly Load: Metered](https://dataminer2.pjm.com/feed/hrl_load_metered), PJM Data Miner. |
+| SUK | Stocks-UK | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. |
+| SUSA | Stocks-USA | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. |
+| SDE | Stocks-DE | [Financial Data Set Used in INFORE Project](https://zenodo.org/record/3886895), Zenodo. |
+| BP | Bitcoin-price | [InfluxDB 2.0 Sample Data](https://github.com/influxdata/influxdb2-sample-data). |
+| AP | Air-pressure | [Barometric Pressure](https://data.neonscience.org/data-products/DP1.00004.001/RELEASE-2022), NEON, release 2022. |
+| BM | Bird-migration | [InfluxDB 2.0 Sample Data](https://github.com/influxdata/influxdb2-sample-data). |
+| BW | Basel-wind | [Historical Weather Data for Basel](https://www.meteoblue.com/en/weather/archive/export/basel_switzerland), meteoblue. |
+| ER | exchange | Lai et al., [Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks](https://doi.org/10.1145/3209978.3210006), SIGIR 2018 (paper). |
+| BT | Basel-temp | [Historical Weather Data for Basel](https://www.meteoblue.com/en/weather/archive/export/basel_switzerland), meteoblue. |
+| WF | waveform_float | [FDSN Dataselect Web Service](https://service.iris.edu/fdsnws/dataselect/1/), IRIS. |
+| EVC | Vehicle_charging | [Electric Vehicle Charging Dataset](https://www.kaggle.com/datasets/michaelbryantds/electric-vehicle-charging-dataset), Kaggle. |
+| BL | Blockchain-tr | [Bitcoin Transactions](https://gz.blockchair.com/bitcoin/transactions), Blockchair. |
+| FP | Food-price | [Global Food Prices Database (WFP)](https://data.humdata.org/dataset/wfp-food-prices), Humanitarian Data Exchange. |
+| SSD | SSD-bench | [SSD and HDD Benchmarks](https://www.kaggle.com/datasets/alanjo/ssd-and-hdd-benchmarks), Kaggle. |
+| CLA | City-lat | [World Cities of Different Countries](https://www.kaggle.com/datasets/kuntalmaity/world-city), Kaggle. |
+| CLO | City-lon | [World Cities of Different Countries](https://www.kaggle.com/datasets/kuntalmaity/world-city), Kaggle. |
 
 ## Baseline implementation sources
 
