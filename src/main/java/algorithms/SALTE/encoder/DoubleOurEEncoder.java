@@ -356,9 +356,11 @@ public class DoubleOurEEncoder extends Encoder {
                 int cap = (1 << countBits) - reservedCodes;
                 int saved = 0;
                 int keySum = 0;
+                int entryCount = 0;
 
                 if (cap > 0) {
                     Map<Key, Integer> top = getTopN(counts, cap);
+                    entryCount = top.size();
                     for (Map.Entry<Key, Integer> en : top.entrySet()) {
                         Key k = en.getKey();
                         int freq = en.getValue();
@@ -372,7 +374,10 @@ public class DoubleOurEEncoder extends Encoder {
                     }
                 }
 
-                long cost = (long) countBits * (BLOCK_SIZE - keySum) - saved;
+                // Charge the actual entries, not the available codeword capacity.
+                // The fixed 21-bit codebook header is identical for all candidates.
+                long codebookBits = (long) (1 + CODEBOOK_ULP_BITS + CODEBOOK_EXP_BITS) * entryCount;
+                long cost = (long) countBits * (BLOCK_SIZE - keySum) - saved + codebookBits;
                 if (cost < minBlockCost) {
                     minBlockCost = cost;
                     bestBits = countBits;
