@@ -375,12 +375,3 @@ License and citation metadata will be added after confirmation by the authors
 and the laboratory. Third-party components remain subject to their respective
 licenses.
 
-## Local archive
-
-`abortion/` contains removed files at their original relative paths under `files/`,
-plus originals of edited files under `before-cleanup/`. It is excluded from Git.
-The move list and restoration instructions are in `abortion/README.md`.
-Only the timing `main` was removed from `SALTSQL_CRUD`; its query, modification,
-rewrite, and index-update methods were retained without changing their behavior.
-The modification paths now call the retained rewrite and index-update methods after
-re-encoding; their returned timings include both steps.
